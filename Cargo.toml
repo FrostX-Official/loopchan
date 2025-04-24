@@ -1,0 +1,12 @@
+[package]
+name = "loopchan"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+async-sqlite = "0.5.1"
+dotenv = "0.15.0"
+poise = "0.6.1"
+roboat = "0.35.0"
+serenity = "0.12"
+tokio = { version = "1.21.2", features = ["macros", "rt-multi-thread"] }
