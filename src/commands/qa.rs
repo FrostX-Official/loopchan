@@ -6,6 +6,7 @@ use crate::utils::db;
 #[poise::command(slash_command, subcommands("status"), subcommand_required)]
 pub async fn qa(_ctx: Context<'_>) -> Result<(), Error> { Ok(()) }
 
+// The most useless command (just check if member has QA role)
 /// Retrieve user's status (if they're in QA program or not.)
 #[poise::command(slash_command)]
 pub async fn status(

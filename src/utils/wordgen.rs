@@ -79,8 +79,7 @@ downshift
 downslam";
 
 pub async fn getgenwords() -> Vec<&'static str> {
-    return WORDS_STR.split("
-").collect();
+    return WORDS_STR.split("\n").collect();
 }
 
 pub async fn getrandomgenword() -> String {

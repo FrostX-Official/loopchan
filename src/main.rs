@@ -8,7 +8,7 @@ use log::LevelFilter;
 
 use once_cell::sync::Lazy;
 use poise::serenity_prelude as serenity;
-use roboat::{self};
+use roboat;
 
 mod commands;
 mod utils;
@@ -82,6 +82,7 @@ async fn main() {
             commands: vec![
                 commands::debug::debug(),
                 commands::rbx::fetchdata(),
+                commands::rbx::verify(),
                 commands::qa::qa()
             ],
             pre_command: |ctx| {
@@ -93,8 +94,7 @@ async fn main() {
                 Box::pin(async move {
                     log::info!("@{} ({}) executing command: \"{}\"", author.name, author.id, ctx.command().name);
 
-                    // TODO: Roblox Linking in rbx.rs
-                    let _ = utils::db::create_user_in_db(&custom_data.db_client, author_id, 0).await;
+                    utils::db::create_user_in_db(&custom_data.db_client, author_id, 0).await.expect("Failed to create user in database in pre-command hook!");
                 })
             },
             ..Default::default()

@@ -38,10 +38,9 @@ pub async fn wordgen(
         randomwords.insert(0, crate::utils::wordgen::getrandomgenword().await);
     }
     ctx.send(poise::CreateReply::default()
-        .content("```".to_owned()+&randomwords.join("
-")+"```")
+        .content("```".to_owned()+&randomwords.join("\n")+"```")
         //.ephemeral(true)
-    ).await?; 
+    ).await?;
     Ok(())
 }
 
