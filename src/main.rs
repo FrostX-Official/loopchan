@@ -1,5 +1,12 @@
 use dotenv::dotenv;
 
+// Logging
+use std::io::Write;
+use env_logger::Builder;
+use chrono::Local;
+use log::LevelFilter;
+
+use once_cell::sync::Lazy;
 use poise::serenity_prelude as serenity;
 use roboat;
 
@@ -29,16 +36,34 @@ struct Data {
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
+static PTL_PAID_TESTING_PRESENCE: Lazy<serenity::ActivityData> = Lazy::new(|| serenity::ActivityData {
+    name: "PTL Paid Testing".to_string(),
+    kind: serenity::ActivityType::Playing,
+    state: None,
+    url: None,
+});
+
 #[tokio::main]
 async fn main() {
     dotenv().ok();
+    Builder::new()
+        .format(|buf: &mut env_logger::fmt::Formatter, record| {
+            writeln!(buf,
+                "{} [{}] - {}",
+                Local::now().format("%Y-%m-%dT%H:%M:%S"),
+                record.level(),
+                record.args()
+            ) 
+        })
+        .filter(None, LevelFilter::Info)
+        .init();
 
-    let token: String = std::env::var("LOOPLINK_DISCORD_TOKEN").expect("missing LOOPLINK_DISCORD_TOKEN");
+    let token: String = std::env::var("LOOPCHAN_DISCORD_TOKEN").expect("missing LOOPCHAN_DISCORD_TOKEN");
 
     let sqlite_client: async_sqlite::Client = ClientBuilder::new()
-                .path("users.db")
-                .open()
-                .await.expect("Failed connecting to sqlite");
+        .path("users.db")
+        .open()
+        .await.expect("Failed connecting to sqlite");
 
     sqlite_client.conn(|conn: &async_sqlite::rusqlite::Connection| {
         conn.execute(
@@ -55,7 +80,7 @@ async fn main() {
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: vec![
-                commands::hello::hello(),
+                commands::ping::ping(),
                 commands::rbx::fetchdata(),
                 commands::qa::qa(),
                 commands::qa::status(),
@@ -69,21 +94,16 @@ async fn main() {
                 let guild_id: u64 = custom_data.guild_id;
                 let staff_role_id: u64 = custom_data.staff_role_id;
                 let qa_role_id: u64 = custom_data.qa_role_id;
-                
 
                 Box::pin(async move {
-                    println!("@{} ({}) executing command: \"{}\"", author.name, author.id, ctx.command().name);
+                    log::info!("@{} ({}) executing command: \"{}\"", author.name, author.id, ctx.command().name);
 
                     let is_staff: bool = author.has_role(ctx, guild_id, staff_role_id).await.unwrap_or(false);
                     let is_qa: bool = author.has_role(ctx, guild_id, qa_role_id).await.unwrap_or(false);
 
                     let _ = &custom_data.db_client.conn(move |conn| {
                         conn.execute(
-                            "INSERT INTO users (discord_id) VALUES (?1, ?2, ?3, ?4) ON CONFLICT DO UPDATE SET
-                            discord_id=excluded.discord_id
-                            roblox_id=excluded.discord_id
-                            staff=excluded.staff
-                            qa=excluded.qa",
+                            "INSERT INTO users (discord_id) VALUES (?1, ?2, ?3, ?4) ON CONFLICT DO NOTHING",
                             (author_id, 0, is_staff, is_qa) // TODO: Roblox Linking in rbx.rs
                         )
                     }).await;
@@ -92,7 +112,11 @@ async fn main() {
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
-            println!("Ready!");
+            ctx.set_activity(Some(PTL_PAID_TESTING_PRESENCE.clone()));
+            ctx.dnd();
+
+            log::info!("Ready!");
+
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                 Ok(Data {
@@ -107,7 +131,6 @@ async fn main() {
                 })
             })
         })
-        
         .build();
 
     let mut client = serenity::ClientBuilder::new(token, serenity::GatewayIntents::non_privileged())
@@ -115,5 +138,5 @@ async fn main() {
         .await
         .expect("Err creating client");
 
-    client.start().await.unwrap();
+    client.start_autosharded().await.unwrap();
 }
