@@ -6,7 +6,6 @@ use env_logger::Builder;
 use chrono::Local;
 use log::LevelFilter;
 
-use once_cell::sync::Lazy;
 use poise::serenity_prelude as serenity;
 use roboat;
 
@@ -43,6 +42,7 @@ type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
 // Loopchan's Game Status
+use once_cell::sync::Lazy;
 static PTL_PAID_TESTING_PRESENCE: Lazy<serenity::ActivityData> = Lazy::new(|| serenity::ActivityData {
     name: "PTL Paid Testing".to_string(),
     kind: serenity::ActivityType::Playing,
@@ -85,6 +85,27 @@ async fn main() {
                 commands::rbx::verify(),
                 commands::qa::qa()
             ],
+            // TODO: Work on giving every command cooldown through command check
+            // command_check: Some(|ctx| {
+            //     Box::pin(async move {
+            //         let mut cooldown_tracker = ctx.command().cooldowns.lock().unwrap();
+
+            //         let mut cooldown_durations: poise::CooldownConfig = poise::CooldownConfig::default();
+
+            //         let remaining_cooldown = cooldown_tracker.remaining_cooldown(ctx.cooldown_context(), &cooldown_durations);
+            //         cooldown_durations.user = Some(std::time::Duration::from_secs(5));
+    
+            //         match remaining_cooldown {
+            //             Some(remaining) => {
+            //                 return Err(format!("Please wait {} seconds", remaining.as_secs()).into())
+            //             }
+            //             None => {
+            //                 cooldown_tracker.start_cooldown(ctx.cooldown_context())
+            //             },
+            //         }
+            //         Ok(true)
+            //     })
+            // }),
             pre_command: |ctx| {
                 let author: &serenity::model::prelude::User = ctx.author();
                 let author_id: u64 = author.id.get();
@@ -97,6 +118,7 @@ async fn main() {
                     utils::db::create_user_in_db(&custom_data.db_client, author_id, 0).await.expect("Failed to create user in database in pre-command hook!");
                 })
             },
+            //manual_cooldowns: true,
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {

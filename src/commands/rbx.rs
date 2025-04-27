@@ -1,16 +1,83 @@
+use std::time::Duration;
+
 use roboat::{thumbnails::{ThumbnailSize, ThumbnailType}, users::UsernameUserDetails};
 use serenity::all::{ButtonStyle, Colour, CreateActionRow, CreateButton, CreateEmbed};
 
-use crate::{Context, Error};
+use crate::{utils::db::get_roblox_id_in_db_by_discord_id, Context, Error};
+
+fn remove_whitespace(s: &str) -> String {
+    s.chars().filter(|c| !c.is_whitespace()).collect()
+}
 
 /// Verify your Discord account by linking it to your Roblox account
-#[poise::command(slash_command)]
+#[poise::command(slash_command, global_cooldown=1, user_cooldown=5)]
 pub async fn verify(
     ctx: Context<'_>,
     #[min_length = 2] #[description = "Roblox Username"] roblox_username: Option<String>,
     #[description = "Roblox User ID"] roblox_user_id: Option<u64>
 ) -> Result<(), Error>  {
-    // TODO: Check if user already has roblox_id in db
+    // Check if user already has roblox_id in db
+    let roblox_client: &roboat::Client = &ctx.data().roblox_client;
+    let db_client: &async_sqlite::Client = &ctx.data().db_client;
+    let roblox_id_in_db: Result<u64, async_sqlite::Error> = get_roblox_id_in_db_by_discord_id(db_client, ctx.author().id.get()).await;
+    
+    if !roblox_id_in_db.is_ok() { // Fail-check
+        ctx.send(poise::CreateReply::default()
+            .embed(
+                CreateEmbed::default()
+                    .title("An error occurred.")
+                    .description("Failed to find your data in database! Please try again later or report this issue to <@908779319084589067>!\n-# ".to_owned()+&roblox_id_in_db.err().unwrap().to_string())
+                    .color(Colour::from_rgb(255, 80, 80))
+            )
+            .ephemeral(true)
+        ).await?;
+        return Ok(());
+    }
+
+    let roblox_id_in_db_unwrapped: u64 = roblox_id_in_db.unwrap();
+
+    if roblox_id_in_db_unwrapped != 0 {
+        let user_details: Result<roboat::users::UserDetails, roboat::RoboatError> = roblox_client.user_details(roblox_id_in_db_unwrapped).await;
+        if !user_details.is_ok() {
+            ctx.send(poise::CreateReply::default()
+                .embed(
+                    CreateEmbed::default()
+                        .title("Already verified!")
+                        .description("You're already verified!\n-# But loopchan failed to find info about your linked account... ? huh.. T-T\n-# ".to_owned()+&roblox_id_in_db_unwrapped.to_string())
+                        .color(Colour::from_rgb(255, 80, 80))
+                )
+                .ephemeral(true)
+            ).await?;
+            return Ok(());
+        }
+
+        let user_details_unwrapped: roboat::users::UserDetails = user_details.unwrap();
+
+        let headshot_thubmnail: Result<String, roboat::RoboatError> = roblox_client.thumbnail_url(roblox_id_in_db_unwrapped, ThumbnailSize::S420x420, ThumbnailType::AvatarHeadshot).await;
+        if headshot_thubmnail.is_ok() {
+            ctx.send(poise::CreateReply::default()
+                .embed(
+                    CreateEmbed::default()
+                        .title("Already verified!")
+                        .thumbnail(headshot_thubmnail.unwrap())
+                        .description("You're already verified as **@".to_owned()+&user_details_unwrapped.username+"**!\n-# "+&roblox_id_in_db_unwrapped.to_string())
+                        .color(Colour::from_rgb(255, 80, 80))
+                )
+                .ephemeral(true)
+            ).await?;
+        } else {
+            ctx.send(poise::CreateReply::default()
+                .embed(
+                    CreateEmbed::default()
+                        .title("Already verified!")
+                        .description("You're already verified as **@".to_owned()+&user_details_unwrapped.username+"**!\n-# "+&roblox_id_in_db_unwrapped.to_string())
+                        .color(Colour::from_rgb(255, 80, 80))
+                )
+                .ephemeral(true)
+            ).await?;
+        }
+        return Ok(());
+    }
 
     // User hasn't provided Roblox Username, neither Roblox User ID
     if roblox_username.is_none() & roblox_user_id.is_none() {
@@ -25,7 +92,6 @@ pub async fn verify(
         ).await?;
         return Ok(());
     }
-    let roblox_client: &roboat::Client = &ctx.data().roblox_client;
 
     // First try to get user details, if they weren't provided try to get username user details.
     let user_details: Option<Result<roboat::users::UserDetails, roboat::RoboatError>>;
@@ -102,6 +168,8 @@ pub async fn verify(
         }
     }
 
+    // Generate wordgen and ask user to change their profile description to it. (and then user clicks done or cancel buttons)
+
     let mut randomwords: Vec<String> = vec![];
     for _ in 0..11 {
         randomwords.insert(0, crate::utils::wordgen::getrandomgenword().await);
@@ -116,22 +184,31 @@ pub async fn verify(
             .label("Cancel")
             .style(ButtonStyle::Secondary)
             .emoji('❌'),
+        CreateButton::new("verification.regenerate")
+            .label("Regenerate")
+            .style(ButtonStyle::Secondary)
+            .emoji('🔃')
+            .disabled(true), // TODO: Add random words regeneration functionality later (incase the ones that were generated before are censored by Roblox)
     ]);
 
     let builder: poise::CreateReply = poise::CreateReply::default()
-    .embed(
-        CreateEmbed::default()
-            .title("Found User!")
-            .description(
-                "Username: ".to_owned()+&roblox_username+"\nUser ID: "+&roblox_user_id.to_string()+
-                "\nPlease confirm that this is your Roblox Account by changing your profile description to:\n```"
-                +&randomwords.join("\n")
-                +"```"
-            )
-            .color(Colour::from_rgb(255, 80, 80))
-    )
-    .components(vec![components])
-    .ephemeral(true);
+        .embed(
+            CreateEmbed::default()
+                .title("Found User!")
+                .description(
+                    "Username: ".to_owned()+&roblox_username+"\nUser ID: "+&roblox_user_id.to_string()+
+                    "\n**Please confirm that this is your Roblox Account by changing your profile description to:**\n```"
+                    +&randomwords.join("\n")
+                    +"```\n## You have 5 minutes.\n-# You can change it back after verification process! (Make sure to save it though :D)"
+                )
+                .color(Colour::from_rgb(255, 255, 100))
+        )
+        .components(vec![components])
+        .ephemeral(true);
+
+    randomwords.remove(0); // For some reason if you join vector with \n separator it will not show first element in embed. This is why we're deleting it after creating embed
+    let no_whitespace_wordgen = remove_whitespace(&randomwords.join("\n"));
+    //println!("{}", no_whitespace_wordgen);
 
     let reply = ctx.send(builder).await?;
 
@@ -140,6 +217,7 @@ pub async fn verify(
         .await?
         .await_component_interaction(ctx)
         .author_id(ctx.author().id)
+        .timeout(Duration::new(300, 0))
         .await;
 
     reply
@@ -149,12 +227,12 @@ pub async fn verify(
                 .components(vec![])
                 .content("Processing... Please wait."),
         )
-        .await?; // remove buttons after button press and edit message
+        .await?;
     
     let pressed_button_id = match &interaction {
         Some(m) => &m.data.custom_id,
         None => {
-            ctx.say(":warning: You didn't interact in time - please run the command again.").await?;
+            ctx.say("⚠ You didn't interact in time!\nRun the command again if you want to verify.").await?;
             return Ok(());
         }
     };
@@ -168,7 +246,36 @@ pub async fn verify(
             )
             .await?;
     } else {
-        // TODO: Check if wordgens match and change user's roblox_id in db, also update roles depending on stuff in game
+        let user_details_fetch: Result<roboat::users::UserDetails, roboat::RoboatError> = roblox_client.user_details(roblox_user_id).await;
+        if !user_details_fetch.is_ok() {
+            reply
+                .edit(
+                    ctx,
+                    poise::CreateReply::default()
+                        .content("Failed to verify your account!\nPlease try again later."),
+                )
+                .await?;
+            return Ok(());
+        }
+
+        let user_details_fetch_unwrapped: roboat::users::UserDetails = user_details_fetch.unwrap();
+        let user_description: String = user_details_fetch_unwrapped.description;
+        let no_whitespace_description = remove_whitespace(&user_description);
+        //println!("{}", no_whitespace_description);
+        //println!("{}", no_whitespace_wordgen);
+        if no_whitespace_description != no_whitespace_wordgen {
+            reply
+                .edit(
+                    ctx,
+                    poise::CreateReply::default()
+                        .content("Your Roblox profile description does not match wordgen.\nIf you think that's not true contact <@908779319084589067> for support!\nYou can try again later."),
+                )
+                .await?;
+            return Ok(());
+        }
+
+       // TODO: Change user's roblox_id in db to new, verified one (also update roles depending on data in game)
+
         reply
             .edit(
                 ctx,

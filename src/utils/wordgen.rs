@@ -2,6 +2,8 @@ use rand::Rng;
 
 const WORDS_STR: &str = "data
 lose
+win
+ragequit
 perpetuity
 hudzell
 lunari
