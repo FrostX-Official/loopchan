@@ -8,9 +8,10 @@ use log::LevelFilter;
 
 use once_cell::sync::Lazy;
 use poise::serenity_prelude as serenity;
-use roboat;
+use roboat::{self};
 
 mod commands;
+mod utils;
 
 use async_sqlite::ClientBuilder;
 
@@ -26,16 +27,20 @@ use async_sqlite::ClientBuilder;
 //     //beta: bool,
 // }
 
+// Data, which is stored and accessible in all command invocations
 struct Data {
-    roblox_client: roboat::Client,
-    db_client: async_sqlite::Client,
+    roblox_client: roboat::Client, // Used for interactions with Roblox API
+    db_client: async_sqlite::Client, // Used for interactions with Loopchan's Database
+    // Misc Variables
     guild_id: u64,
     staff_role_id: u64,
     qa_role_id: u64
-} // User data, which is stored and accessible in all command invocations
+}
+
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
+// Loopchan's Game Status
 static PTL_PAID_TESTING_PRESENCE: Lazy<serenity::ActivityData> = Lazy::new(|| serenity::ActivityData {
     name: "PTL Paid Testing".to_string(),
     kind: serenity::ActivityType::Playing,
@@ -45,7 +50,10 @@ static PTL_PAID_TESTING_PRESENCE: Lazy<serenity::ActivityData> = Lazy::new(|| se
 
 #[tokio::main]
 async fn main() {
+    // .env
     dotenv().ok();
+
+    // Logger
     Builder::new()
         .format(|buf: &mut env_logger::fmt::Formatter, record| {
             writeln!(buf,
@@ -58,8 +66,7 @@ async fn main() {
         .filter(None, LevelFilter::Info)
         .init();
 
-    let token: String = std::env::var("LOOPCHAN_DISCORD_TOKEN").expect("missing LOOPCHAN_DISCORD_TOKEN");
-
+    // Loopchan's Database
     let sqlite_client: async_sqlite::Client = ClientBuilder::new()
         .path("users.db")
         .open()
@@ -77,19 +84,19 @@ async fn main() {
         )
     }).await.unwrap();
 
+    // Loopchan's Poise Framework
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: vec![
-                commands::ping::ping(),
+                commands::debug::debug(),
                 commands::rbx::fetchdata(),
-                commands::qa::qa(),
-                commands::qa::status(),
+                commands::qa::qa()
             ],
             pre_command: |ctx| {
                 let author: &serenity::model::prelude::User = ctx.author();
                 let author_id: u64 = author.id.get();
 
-                let custom_data = ctx.data();
+                let custom_data: &Data = ctx.data();
 
                 let guild_id: u64 = custom_data.guild_id;
                 let staff_role_id: u64 = custom_data.staff_role_id;
@@ -101,12 +108,8 @@ async fn main() {
                     let is_staff: bool = author.has_role(ctx, guild_id, staff_role_id).await.unwrap_or(false);
                     let is_qa: bool = author.has_role(ctx, guild_id, qa_role_id).await.unwrap_or(false);
 
-                    let _ = &custom_data.db_client.conn(move |conn| {
-                        conn.execute(
-                            "INSERT INTO users (discord_id) VALUES (?1, ?2, ?3, ?4) ON CONFLICT DO NOTHING",
-                            (author_id, 0, is_staff, is_qa) // TODO: Roblox Linking in rbx.rs
-                        )
-                    }).await;
+                    // TODO: Roblox Linking in rbx.rs
+                    let _ = utils::db::create_user_in_db(&custom_data.db_client, author_id, 0, is_staff, is_qa).await;
                 })
             },
             ..Default::default()
@@ -118,14 +121,15 @@ async fn main() {
             log::info!("Ready!");
 
             Box::pin(async move {
-                poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+                let ptl_guild_id: serenity::model::prelude::GuildId = std::env::var("PTL_GUILD_ID").expect("missing PTL_GUILD_ID").parse().unwrap();
+                // Register commands
+                //poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+                poise::builtins::register_in_guild(&ctx.http, &framework.options().commands, ptl_guild_id).await?;
+                // Create global data for commands and hooks
                 Ok(Data {
                     roblox_client: roboat::ClientBuilder::new().build(),
-                    db_client: ClientBuilder::new()
-                        .path("users.db")
-                        .open()
-                        .await.expect("Failed connecting to sqlite"),
-                    guild_id: std::env::var("PTL_GUILD_ID").expect("missing PTL_GUILD_ID").parse().unwrap(),
+                    db_client: sqlite_client,
+                    guild_id: ptl_guild_id.into(),
                     staff_role_id: std::env::var("STAFF_ROLE_ID").expect("missing STAFF_ROLE_ID").parse().unwrap(),
                     qa_role_id: std::env::var("QA_ROLE_ID").expect("missing QA_ROLE_ID").parse().unwrap()
                 })
@@ -133,7 +137,9 @@ async fn main() {
         })
         .build();
 
-    let mut client = serenity::ClientBuilder::new(token, serenity::GatewayIntents::non_privileged())
+    // Loopchan Start
+    let token: String = std::env::var("LOOPCHAN_DISCORD_TOKEN").expect("missing LOOPCHAN_DISCORD_TOKEN");
+    let mut client: serenity::Client = serenity::ClientBuilder::new(token, serenity::GatewayIntents::all())
         .framework(framework)
         .await
         .expect("Err creating client");
