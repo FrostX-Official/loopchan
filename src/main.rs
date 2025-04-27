@@ -72,17 +72,7 @@ async fn main() {
         .open()
         .await.expect("Failed connecting to sqlite");
 
-    sqlite_client.conn(|conn: &async_sqlite::rusqlite::Connection| {
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS users (
-                discord_id INTEGER PRIMARY KEY,
-                roblox_id INTEGER,
-                staff BOOLEAN,
-                qa BOOLEAN
-            )",
-            []
-        )
-    }).await.unwrap();
+    utils::db::prepare_users_db(&sqlite_client).await;
 
     // Loopchan's Poise Framework
     let framework = poise::Framework::builder()
