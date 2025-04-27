@@ -1,4 +1,6 @@
 use dotenv::dotenv;
+use poise::CreateReply;
+use ::serenity::all::CreateAllowedMentions;
 
 // Logging
 use std::io::Write;
@@ -6,6 +8,7 @@ use env_logger::Builder;
 use chrono::Local;
 use log::LevelFilter;
 
+use poise::FrameworkError;
 use poise::serenity_prelude as serenity;
 use roboat;
 
@@ -49,6 +52,190 @@ static PTL_PAID_TESTING_PRESENCE: Lazy<serenity::ActivityData> = Lazy::new(|| se
     state: None,
     url: None,
 });
+
+async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
+    match error {
+        crate::FrameworkError::Setup { error, .. } => {
+            eprintln!("Error in user data setup: {}", error);
+        }
+        crate::FrameworkError::EventHandler { error, event, .. } => log::error!(
+            "User event event handler encountered an error on {} event: {}",
+            event.snake_case_name(),
+            error
+        ),
+        crate::FrameworkError::Command { ctx, error , .. } => {
+            let error = error.to_string();
+            eprintln!("An error occured in a command: {}", error);
+
+            let mentions = CreateAllowedMentions::new()
+                .everyone(false)
+                .all_roles(false)
+                .all_users(false);
+
+            ctx.send(
+                CreateReply::default()
+                    .content(error)
+                    .allowed_mentions(mentions),
+            )
+            .await.expect("Failed to send error message");
+        }
+        crate::FrameworkError::SubcommandRequired { ctx } => {
+            let subcommands = ctx
+                .command()
+                .subcommands
+                .iter()
+                .map(|s| &*s.name)
+                .collect::<Vec<_>>();
+            let response = format!(
+                "You must specify one of the following subcommands: {}",
+                subcommands.join(", ")
+            );
+            ctx.send(CreateReply::default().content(response).ephemeral(true))
+                .await.expect("Failed to send error message");
+        }
+        crate::FrameworkError::CommandPanic { ctx, payload: _ , .. } => {
+            // Not showing the payload to the user because it may contain sensitive info
+            let embed = serenity::CreateEmbed::default()
+                .title("Internal error")
+                .color((255, 0, 0))
+                .description("An unexpected internal error has occurred.");
+
+            ctx.send(CreateReply::default().embed(embed).ephemeral(true))
+                .await.expect("Failed to send error message");
+        }
+        crate::FrameworkError::ArgumentParse { ctx, input, error, .. } => {
+            // If we caught an argument parse error, give a helpful error message with the
+            // command explanation if available
+            let usage = match &ctx.command().help_text {
+                Some(help_text) => &**help_text,
+                None => "Please check the help menu for usage information",
+            };
+            let response = if let Some(input) = input {
+                format!(
+                    "**Cannot parse `{}` as argument: {}**\n{}",
+                    input, error, usage
+                )
+            } else {
+                format!("**{}**\n{}", error, usage)
+            };
+
+            let mentions = CreateAllowedMentions::new()
+                .everyone(false)
+                .all_roles(false)
+                .all_users(false);
+
+            ctx.send(
+                CreateReply::default()
+                    .content(response)
+                    .allowed_mentions(mentions),
+            )
+            .await.expect("Failed to send error message");
+        }
+        crate::FrameworkError::CommandStructureMismatch { ctx, description, .. } => {
+            log::error!(
+                "Error: failed to deserialize interaction arguments for `/{}`: {}",
+                ctx.command.name,
+                description,
+            );
+        }
+        crate::FrameworkError::CommandCheckFailed { ctx, error, .. } => {
+            log::error!(
+                "A command check failed in command {} for user {}: {:?}",
+                ctx.command().name,
+                ctx.author().name,
+                error,
+            );
+        }
+        crate::FrameworkError::CooldownHit {
+            remaining_cooldown,
+            ctx,
+            ..
+        } => {
+            let msg = format!(
+                "You're too fast! Please wait `{}` seconds before retrying",
+                remaining_cooldown.as_secs()
+            );
+            ctx.send(CreateReply::default().content(msg).ephemeral(true))
+                .await.expect("Failed to send error message");
+        }
+        crate::FrameworkError::MissingBotPermissions {
+            missing_permissions,
+            ctx,
+            ..
+        } => {
+            let msg = format!(
+                "Command cannot be executed because the bot is lacking permissions: {}",
+                missing_permissions,
+            );
+            ctx.send(CreateReply::default().content(msg).ephemeral(true))
+                .await.expect("Failed to send error message");
+        }
+        crate::FrameworkError::MissingUserPermissions {
+            missing_permissions,
+            ctx,
+            ..
+        } => {
+            let response = if let Some(missing_permissions) = missing_permissions {
+                format!(
+                    "You're lacking permissions for `{}{}`: {}",
+                    ctx.prefix(),
+                    ctx.command().name,
+                    missing_permissions,
+                )
+            } else {
+                format!(
+                    "You may be lacking permissions for `{}{}`. Not executing for safety",
+                    ctx.prefix(),
+                    ctx.command().name,
+                )
+            };
+            ctx.send(CreateReply::default().content(response).ephemeral(true))
+                .await.expect("Failed to send error message");
+        }
+        crate::FrameworkError::NotAnOwner { ctx, .. } => {
+            let response = "Only bot owners can call this command";
+            ctx.send(CreateReply::default().content(response).ephemeral(true))
+                .await.expect("Failed to send error message");
+        }
+        crate::FrameworkError::GuildOnly { ctx, .. } => {
+            let response = "You cannot run this command in DMs.";
+            ctx.send(CreateReply::default().content(response).ephemeral(true))
+                .await.expect("Failed to send error message");
+        }
+        crate::FrameworkError::DmOnly { ctx, .. } => {
+            let response = "You cannot run this command outside DMs.";
+            ctx.send(CreateReply::default().content(response).ephemeral(true))
+                .await.expect("Failed to send error message");
+        }
+        crate::FrameworkError::NsfwOnly { ctx, .. } => {
+            let response = "You cannot run this command outside NSFW channels.";
+            ctx.send(CreateReply::default().content(response).ephemeral(true))
+                .await.expect("Failed to send error message");
+        }
+        crate::FrameworkError::DynamicPrefix { error, msg, .. } => {
+            log::error!(
+                "Dynamic prefix failed for message {:?}: {}",
+                msg.content,
+                error
+            );
+        }
+        crate::FrameworkError::UnknownCommand {
+            msg_content,
+            prefix,
+            ..
+        } => {
+            log::warn!(
+                "Recognized prefix `{}`, but didn't recognize command name in `{}`",
+                prefix,
+                msg_content,
+            );
+        }
+        crate::FrameworkError::UnknownInteraction { interaction, .. } => {
+            log::warn!("received unknown interaction \"{}\"", interaction.data.name);
+        }
+        crate::FrameworkError::__NonExhaustive(unreachable) => match unreachable {},
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -106,6 +293,7 @@ async fn main() {
             //         Ok(true)
             //     })
             // }),
+            on_error: |error| Box::pin(on_error(error)),
             pre_command: |ctx| {
                 let author: &serenity::model::prelude::User = ctx.author();
                 let author_id: u64 = author.id.get();

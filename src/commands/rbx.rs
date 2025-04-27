@@ -208,7 +208,6 @@ pub async fn verify(
 
     randomwords.remove(0); // For some reason if you join vector with \n separator it will not show first element in embed. This is why we're deleting it after creating embed
     let no_whitespace_wordgen = remove_whitespace(&randomwords.join("\n"));
-    //println!("{}", no_whitespace_wordgen);
 
     let reply = ctx.send(builder).await?;
 
@@ -238,6 +237,7 @@ pub async fn verify(
     };
 
     if pressed_button_id == "verification.cancel" {
+        // Cancel verification
         reply
             .edit(
                 ctx,
@@ -246,6 +246,7 @@ pub async fn verify(
             )
             .await?;
     } else {
+        // Check if wordgens match
         let user_details_fetch: Result<roboat::users::UserDetails, roboat::RoboatError> = roblox_client.user_details(roblox_user_id).await;
         if !user_details_fetch.is_ok() {
             reply
@@ -261,8 +262,7 @@ pub async fn verify(
         let user_details_fetch_unwrapped: roboat::users::UserDetails = user_details_fetch.unwrap();
         let user_description: String = user_details_fetch_unwrapped.description;
         let no_whitespace_description = remove_whitespace(&user_description);
-        //println!("{}", no_whitespace_description);
-        //println!("{}", no_whitespace_wordgen);
+        
         if no_whitespace_description != no_whitespace_wordgen {
             reply
                 .edit(
