@@ -28,11 +28,13 @@ use async_sqlite::ClientBuilder;
 // }
 
 // Data, which is stored and accessible in all command invocations
+#[allow(dead_code)]
 struct Data {
     roblox_client: roboat::Client, // Used for interactions with Roblox API
     db_client: async_sqlite::Client, // Used for interactions with Loopchan's Database
     // Misc Variables
     guild_id: u64,
+    // these will be useful later
     staff_role_id: u64,
     qa_role_id: u64
 }
@@ -88,18 +90,11 @@ async fn main() {
 
                 let custom_data: &Data = ctx.data();
 
-                let guild_id: u64 = custom_data.guild_id;
-                let staff_role_id: u64 = custom_data.staff_role_id;
-                let qa_role_id: u64 = custom_data.qa_role_id;
-
                 Box::pin(async move {
                     log::info!("@{} ({}) executing command: \"{}\"", author.name, author.id, ctx.command().name);
 
-                    let is_staff: bool = author.has_role(ctx, guild_id, staff_role_id).await.unwrap_or(false);
-                    let is_qa: bool = author.has_role(ctx, guild_id, qa_role_id).await.unwrap_or(false);
-
                     // TODO: Roblox Linking in rbx.rs
-                    let _ = utils::db::create_user_in_db(&custom_data.db_client, author_id, 0, is_staff, is_qa).await;
+                    let _ = utils::db::create_user_in_db(&custom_data.db_client, author_id, 0).await;
                 })
             },
             ..Default::default()
