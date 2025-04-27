@@ -1,7 +1,7 @@
-use crate::{Context, Error};
+use crate::{utils::checks::is_staff, Context, Error};
 
 /// Bot Debug Commands
-#[poise::command(slash_command, subcommands("ping", "register"), subcommand_required)]
+#[poise::command(slash_command, subcommands("ping", "register", "wordgen"), subcommand_required)]
 pub async fn debug(_ctx: Context<'_>) -> Result<(), Error> { Ok(()) }
 
 /// Check bot latency
@@ -19,16 +19,43 @@ pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-/// Slash Commands Registering Handler
+/// Generate random word from wordgen module
 #[poise::command(slash_command)]
-pub async fn register(ctx: Context<'_>) -> Result<(), Error> {
-    if ctx.author().id != ctx.guild().unwrap().owner_id {
+pub async fn wordgen(
+    ctx: Context<'_>,
+    #[min_length = 1] #[max_length = 254] #[description = "Amount"] amount: u8
+) -> Result<(), Error> {
+    if !is_staff(ctx, ctx.author()).await {
         ctx.send(poise::CreateReply::default()
-            .content("No access.")
+            .content("No Access.")
             //.ephemeral(true)
         ).await?;
         return Ok(());
     }
+
+    let mut randomwords: Vec<String> = vec![];
+    for _ in 0..amount+1 {
+        randomwords.insert(0, crate::utils::wordgen::getrandomgenword().await);
+    }
+    ctx.send(poise::CreateReply::default()
+        .content("```".to_owned()+&randomwords.join("
+")+"```")
+        //.ephemeral(true)
+    ).await?; 
+    Ok(())
+}
+
+/// Slash Commands Registering Handler
+#[poise::command(slash_command)]
+pub async fn register(ctx: Context<'_>) -> Result<(), Error> {
+    if !is_staff(ctx, ctx.author()).await {
+        ctx.send(poise::CreateReply::default()
+            .content("No Access.")
+            //.ephemeral(true)
+        ).await?;
+        return Ok(());
+    }
+
     poise::builtins::register_application_commands_buttons(ctx).await?;
     Ok(())
 }

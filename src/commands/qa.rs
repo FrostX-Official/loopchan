@@ -1,3 +1,4 @@
+use crate::utils::checks::is_qa;
 use crate::{Context, Error};
 use crate::utils::db;
 
@@ -12,8 +13,6 @@ pub async fn status(
     #[description = "Message"] user: Option<serenity::model::user::User>
 ) -> Result<(), Error> {
     let custom_data = ctx.data();
-    let guild_id: u64 = custom_data.guild_id;
-    let qa_role_id: u64 = custom_data.qa_role_id;
 
     let nuser: serenity::model::user::User;
 
@@ -23,11 +22,11 @@ pub async fn status(
         nuser = user.unwrap();
     }
 
-    let is_qa: bool = nuser.has_role(ctx, guild_id, qa_role_id).await.unwrap_or(false);
+    let is_qa_v: bool = is_qa(ctx, &nuser).await;
     db::create_user_in_db(&custom_data.db_client, nuser.id.into(), 0).await?;
 
     ctx.send(poise::CreateReply::default()
-        .content(is_qa.to_string())
+        .content(is_qa_v.to_string())
         .ephemeral(true)
     ).await?;
  
