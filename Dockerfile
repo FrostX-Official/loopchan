@@ -13,7 +13,6 @@ RUN rm -rf ./src
 COPY ./src ./src
 RUN touch -a -m ./src/main.rs
 RUN --mount=type=bind,source=src,target=src \
-    --mount=type=bind,source=db,target=db \
     --mount=type=bind,source=Cargo.toml,target=Cargo.toml \
     --mount=type=bind,source=Cargo.lock,target=Cargo.lock \
     --mount=type=cache,target=/app/target/ \
