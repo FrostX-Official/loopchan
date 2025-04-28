@@ -4,7 +4,7 @@ RUN apk add musl-dev
 
 WORKDIR /app
 
-COPY ./Cargo.lock ./
+COPY ./Cargo.toml ./
 
 RUN mkdir src && echo "fn main() {}" > src/main.rs
 
