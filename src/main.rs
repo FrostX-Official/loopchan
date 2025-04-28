@@ -358,7 +358,7 @@ async fn main() {
 
     // Loopchan's Database
     let sqlite_client: async_sqlite::Client = ClientBuilder::new()
-        .path("users.db")
+        .path("db/users.db")
         .open()
         .await.expect("Failed connecting to sqlite");
 

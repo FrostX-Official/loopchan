@@ -1,2 +1,7 @@
-volumes:
-  - ./users.db:/root/loopchans-databases/users.db
+services:
+  sqlite3:
+    image: nouchka/sqlite3:latest
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./db:/root/loopchans-databases/
