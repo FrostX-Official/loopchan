@@ -1,5 +1,4 @@
 .env
 .db
 .gitconfig
-Cargo.lock
 target/
