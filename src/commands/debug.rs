@@ -1,4 +1,4 @@
-use crate::{utils::checks::is_staff, Context, Error};
+use crate::{utils::basic::is_staff, Context, Error};
 
 /// Bot Debug Commands
 #[poise::command(slash_command, subcommands("ping", "register", "wordgen"), subcommand_required)]

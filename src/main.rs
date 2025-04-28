@@ -1,6 +1,11 @@
 use dotenv::dotenv;
 use poise::CreateReply;
+use ::serenity::all::Colour;
+use ::serenity::all::ComponentInteraction;
 use ::serenity::all::CreateAllowedMentions;
+use ::serenity::all::CreateEmbed;
+use ::serenity::all::EditMessage;
+use utils::basic::parse_env_as_string;
 
 // Logging
 use std::io::Write;
@@ -34,12 +39,11 @@ use async_sqlite::ClientBuilder;
 struct Data {
     roblox_client: roboat::Client, // Used for interactions with Roblox API
     db_client: async_sqlite::Client, // Used for interactions with Loopchan's Database
-    // Misc Variables
-    guild_id: u64,
-    // these will be useful later
-    staff_role_id: u64,
-    qa_role_id: u64,
-    member_role_id: u64
+    // MOVED TO ENVIRONMENT ! READ ONLY FROM .ENV NOW
+    // guild_id: u64,
+    // staff_role_id: u64,
+    // qa_role_id: u64,
+    // member_role_id: u64
 }
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -239,6 +243,58 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     }
 }
 
+async fn handle_message_component(ctx: &serenity::Context, component: &ComponentInteraction) -> Result<(), Error> {
+    if component.data.custom_id == "qa.invitation.accept" {
+        component.message.clone().edit(ctx, 
+            EditMessage::default()
+            .embed(
+                CreateEmbed::default()
+                    .title("QA Team Invitation")
+                    .description(
+                        "QA Form reviewers have been notified about your application." // TODO: Send notification in channel with id=QA_FORMS_CHANNEL_ID (env)
+                    )
+                    .color(Colour::from_rgb(255, 255, 255))
+            ).components(vec![])
+        ).await?;
+        component.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
+    } else if component.data.custom_id == "qa.invitation.deny" {
+        component.message.clone().edit(ctx, 
+            EditMessage::default()
+            .embed(
+                CreateEmbed::default()
+                    .title("QA Team Invitation")
+                    .description(
+                        "You have declined the invitation."
+                    )
+                    .color(Colour::from_rgb(255, 100, 100))
+            ).components(vec![])
+        ).await?;
+        component.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
+    }
+
+    Ok(())
+}
+
+async fn event_handler(
+    ctx: &serenity::Context,
+    event: &serenity::FullEvent,
+    _framework: poise::FrameworkContext<'_, Data, Error>,
+    _data: &Data,
+) -> Result<(), Error> {
+    match event {
+        serenity::FullEvent::Ready { data_about_bot, .. } => { // Print bot's username on startup
+            log::warn!("Logged in as {}", data_about_bot.user.name);
+        }
+        serenity::FullEvent::InteractionCreate { interaction } => { // Different interactions handling
+            // Message Component
+            let is_component: Option<ComponentInteraction> = interaction.clone().into_message_component();
+            if !is_component.is_none() { handle_message_component(ctx, &is_component.unwrap()).await?; }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() {
     // .env
@@ -254,7 +310,7 @@ async fn main() {
                 record.args()
             ) 
         })
-        .filter(None, LevelFilter::Info)
+        .filter(None, LevelFilter::Warn)
         .init();
 
     // Loopchan's Database
@@ -295,6 +351,9 @@ async fn main() {
             //         Ok(true)
             //     })
             // }),
+            event_handler: |ctx, event, framework, data| {
+                Box::pin(event_handler(ctx, event, framework, data))
+            },
             on_error: |error| Box::pin(on_error(error)),
             pre_command: |ctx| {
                 let author: &serenity::model::prelude::User = ctx.author();
@@ -303,7 +362,7 @@ async fn main() {
                 let custom_data: &Data = ctx.data();
 
                 Box::pin(async move {
-                    log::info!("@{} ({}) executing command: \"{}\"", author.name, author.id, ctx.command().name);
+                    log::warn!("@{} ({}) executing command: \"{}\"", author.name, author.id, ctx.command().name);
 
                     utils::db::create_user_in_db(&custom_data.db_client, author_id, 0).await.expect("Failed to create user in database in pre-command hook!");
                 })
@@ -315,21 +374,17 @@ async fn main() {
             ctx.set_activity(Some(PTL_PAID_TESTING_PRESENCE.clone()));
             ctx.dnd();
 
-            log::info!("Ready!");
+            log::warn!("Ready!");
 
             Box::pin(async move {
-                let ptl_guild_id: serenity::model::prelude::GuildId = std::env::var("PTL_GUILD_ID").expect("missing PTL_GUILD_ID").parse().unwrap();
+                let ptl_guild_id: serenity::model::prelude::GuildId = parse_env_as_string("PTL_GUILD_ID").parse().unwrap();
                 // Register commands
                 //poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                 poise::builtins::register_in_guild(&ctx.http, &framework.options().commands, ptl_guild_id).await?;
                 // Create global data for commands and hooks
                 Ok(Data {
                     roblox_client: roboat::ClientBuilder::new().build(),
-                    db_client: sqlite_client,
-                    guild_id: ptl_guild_id.into(),
-                    staff_role_id: std::env::var("STAFF_ROLE_ID").expect("missing STAFF_ROLE_ID").parse().unwrap(),
-                    qa_role_id: std::env::var("QA_ROLE_ID").expect("missing QA_ROLE_ID").parse().unwrap(),
-                    member_role_id: std::env::var("MEMBER_ROLE_ID").expect("missing MEMBER_ROLE_ID").parse().unwrap()
+                    db_client: sqlite_client
                 })
             })
         })
@@ -343,4 +398,6 @@ async fn main() {
         .expect("Err creating client");
 
     client.start_autosharded().await.unwrap();
+
+    log::warn!("WILL THIS CODE RUN?");
 }

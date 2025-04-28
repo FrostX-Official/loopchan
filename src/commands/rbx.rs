@@ -3,7 +3,7 @@ use std::time::Duration;
 use roboat::{thumbnails::{ThumbnailSize, ThumbnailType}, users::UsernameUserDetails};
 use serenity::all::{ButtonStyle, Colour, CreateActionRow, CreateButton, CreateEmbed};
 
-use crate::{Data, utils::db::{get_roblox_id_in_db_by_discord_id, update_roblox_id_in_db}, Context, Error};
+use crate::{utils::{basic::parse_env_as_u64, db::{get_roblox_id_in_db_by_discord_id, update_roblox_id_in_db}}, Context, Data, Error};
 
 fn remove_whitespace(s: &str) -> String {
     s.chars().filter(|c: &char| !c.is_whitespace()).collect()
@@ -292,7 +292,7 @@ pub async fn verify(
 
         // TODO: Also update roles depending on data in game
 
-        let successfully_gave_member_role: Result<(), serenity::Error> = ctx.author_member().await.unwrap().add_role(ctx, ctx_data.member_role_id).await;
+        let successfully_gave_member_role: Result<(), serenity::Error> = ctx.author_member().await.unwrap().add_role(ctx, parse_env_as_u64("MEMBER_ROLE_ID")).await;
         if !successfully_gave_member_role.is_ok() {
             reply
                 .edit(
