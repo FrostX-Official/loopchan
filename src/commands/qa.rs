@@ -76,7 +76,7 @@ pub async fn sendform(
         ]),
     ];
 
-    user.direct_message(ctx, serenity::all::CreateMessage::default()
+    let sent_message: Result<serenity::model::prelude::Message, serenity::Error> = user.direct_message(ctx, serenity::all::CreateMessage::default()
         .embed(
             CreateEmbed::default()
                 .title("QA Team Invitation")
@@ -87,6 +87,19 @@ pub async fn sendform(
                 )
                 .color(Colour::from_rgb(255, 255, 255))
         ).components(components)
-    ).await?;
+    ).await;
+
+    if sent_message.is_ok() {
+        ctx.send(poise::CreateReply::default()
+            .content("Successfully sent user QA Form link.")
+            .ephemeral(true)
+        ).await?;
+    } else {
+        ctx.send(poise::CreateReply::default()
+            .content("Failed to send QA form link to user!\n-# ".to_owned()+&sent_message.err().unwrap().to_string())
+            .ephemeral(true)
+        ).await?;
+    }
+
     Ok(())
 }

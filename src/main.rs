@@ -1,11 +1,13 @@
 use dotenv::dotenv;
 use poise::CreateReply;
+use ::serenity::all::ChannelId;
 use ::serenity::all::Colour;
 use ::serenity::all::ComponentInteraction;
 use ::serenity::all::CreateAllowedMentions;
 use ::serenity::all::CreateEmbed;
 use ::serenity::all::EditMessage;
 use utils::basic::parse_env_as_string;
+use utils::basic::parse_env_as_u64;
 
 // Logging
 use std::io::Write;
@@ -243,21 +245,62 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     }
 }
 
-async fn handle_message_component(ctx: &serenity::Context, component: &ComponentInteraction) -> Result<(), Error> {
+async fn handle_message_component(
+    ctx: &serenity::Context,
+    _event: &serenity::FullEvent,
+    _framework: poise::FrameworkContext<'_, Data, Error>,
+    _data: &Data,
+    component: &ComponentInteraction
+) -> Result<(), Error> {
     if component.data.custom_id == "qa.invitation.accept" {
+        let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(parse_env_as_u64("PTL_GUILD_ID")).unwrap().channels.clone();
+        let qa_forms_channel = ptl_channels.get(&parse_env_as_u64("QA_FORMS_CHANNEL_ID").into());
+        if qa_forms_channel.is_none() {
+            log::warn!("Failed to get QA Forms Channel while user was accepting QA invitation!");
+            return Ok(());
+        }
+
+        qa_forms_channel.unwrap().send_message(ctx,  serenity::all::CreateMessage::default()
+            .embed(
+                CreateEmbed::default()
+                    .title("QA Team Invitation")
+                    .description("@".to_owned()+&component.user.name+" (<@"+&component.user.id.to_string()+">) have accepted QA Team Invitation!")
+                    .color(Colour::from_rgb(100, 255, 100))
+            )
+        ).await?;
+
+        log::warn!("@{} ({}) have accepted QA Team invitation!", component.user.name, component.user.id);
         component.message.clone().edit(ctx, 
             EditMessage::default()
             .embed(
                 CreateEmbed::default()
                     .title("QA Team Invitation")
                     .description(
-                        "QA Form reviewers have been notified about your application." // TODO: Send notification in channel with id=QA_FORMS_CHANNEL_ID (env)
+                        "QA Form reviewers have been notified about your application."
                     )
                     .color(Colour::from_rgb(255, 255, 255))
             ).components(vec![])
         ).await?;
+
         component.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
     } else if component.data.custom_id == "qa.invitation.deny" {
+        let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(parse_env_as_u64("PTL_GUILD_ID")).unwrap().channels.clone();
+        let qa_forms_channel = ptl_channels.get(&parse_env_as_u64("QA_FORMS_CHANNEL_ID").into());
+        if qa_forms_channel.is_none() {
+            log::warn!("Failed to get QA Forms Channel while user was accepting QA invitation!");
+            return Ok(());
+        }
+
+        qa_forms_channel.unwrap().send_message(ctx,  serenity::all::CreateMessage::default()
+            .embed(
+                CreateEmbed::default()
+                    .title("QA Team Invitation")
+                    .description("@".to_owned()+&component.user.name+" (<@"+&component.user.id.to_string()+">) have declined QA Team Invitation.")
+                    .color(Colour::from_rgb(255, 100, 100))
+            )
+        ).await?;
+
+        log::warn!("@{} ({}) have declined QA Team invitation!", component.user.name, component.user.id);
         component.message.clone().edit(ctx, 
             EditMessage::default()
             .embed(
@@ -278,8 +321,8 @@ async fn handle_message_component(ctx: &serenity::Context, component: &Component
 async fn event_handler(
     ctx: &serenity::Context,
     event: &serenity::FullEvent,
-    _framework: poise::FrameworkContext<'_, Data, Error>,
-    _data: &Data,
+    framework: poise::FrameworkContext<'_, Data, Error>,
+    data: &Data,
 ) -> Result<(), Error> {
     match event {
         serenity::FullEvent::Ready { data_about_bot, .. } => { // Print bot's username on startup
@@ -288,7 +331,7 @@ async fn event_handler(
         serenity::FullEvent::InteractionCreate { interaction } => { // Different interactions handling
             // Message Component
             let is_component: Option<ComponentInteraction> = interaction.clone().into_message_component();
-            if !is_component.is_none() { handle_message_component(ctx, &is_component.unwrap()).await?; }
+            if !is_component.is_none() { handle_message_component(ctx, event,  framework, data, &is_component.unwrap()).await?; }
         }
         _ => {}
     }
