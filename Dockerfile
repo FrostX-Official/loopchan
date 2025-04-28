@@ -6,8 +6,6 @@ WORKDIR /app
 
 COPY ./ ./
 
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-
 COPY ./src ./src
 RUN cargo build --release
 
