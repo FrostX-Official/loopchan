@@ -38,7 +38,8 @@ struct Data {
     guild_id: u64,
     // these will be useful later
     staff_role_id: u64,
-    qa_role_id: u64
+    qa_role_id: u64,
+    member_role_id: u64
 }
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -327,7 +328,8 @@ async fn main() {
                     db_client: sqlite_client,
                     guild_id: ptl_guild_id.into(),
                     staff_role_id: std::env::var("STAFF_ROLE_ID").expect("missing STAFF_ROLE_ID").parse().unwrap(),
-                    qa_role_id: std::env::var("QA_ROLE_ID").expect("missing QA_ROLE_ID").parse().unwrap()
+                    qa_role_id: std::env::var("QA_ROLE_ID").expect("missing QA_ROLE_ID").parse().unwrap(),
+                    member_role_id: std::env::var("MEMBER_ROLE_ID").expect("missing MEMBER_ROLE_ID").parse().unwrap()
                 })
             })
         })

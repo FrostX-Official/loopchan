@@ -28,7 +28,7 @@ pub async fn wordgen(
     if !is_staff(ctx, ctx.author()).await {
         ctx.send(poise::CreateReply::default()
             .content("No Access.")
-            //.ephemeral(true)
+            .ephemeral(true)
         ).await?;
         return Ok(());
     }
@@ -39,7 +39,7 @@ pub async fn wordgen(
     }
     ctx.send(poise::CreateReply::default()
         .content("```".to_owned()+&randomwords.join("\n")+"```")
-        //.ephemeral(true)
+        .ephemeral(true)
     ).await?;
     Ok(())
 }

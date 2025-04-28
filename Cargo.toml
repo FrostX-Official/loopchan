@@ -2,6 +2,10 @@
 name = "loopchan"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
+
+[build-dependencies]
+winres = "0.1"
 
 [dependencies]
 async-sqlite = "0.5.1"

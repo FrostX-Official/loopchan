@@ -3,10 +3,10 @@ use std::time::Duration;
 use roboat::{thumbnails::{ThumbnailSize, ThumbnailType}, users::UsernameUserDetails};
 use serenity::all::{ButtonStyle, Colour, CreateActionRow, CreateButton, CreateEmbed};
 
-use crate::{utils::db::{get_roblox_id_in_db_by_discord_id, update_roblox_id_in_db}, Context, Error};
+use crate::{Data, utils::db::{get_roblox_id_in_db_by_discord_id, update_roblox_id_in_db}, Context, Error};
 
 fn remove_whitespace(s: &str) -> String {
-    s.chars().filter(|c| !c.is_whitespace()).collect()
+    s.chars().filter(|c: &char| !c.is_whitespace()).collect()
 }
 
 /// Verify your Discord account by linking it to your Roblox account
@@ -17,9 +17,10 @@ pub async fn verify(
     #[description = "Roblox User ID"] roblox_user_id: Option<u64>
 ) -> Result<(), Error>  {
     // Check if user already has roblox_id in db
-    let roblox_client: &roboat::Client = &ctx.data().roblox_client;
-    let db_client: &async_sqlite::Client = &ctx.data().db_client;
-    let author_id = ctx.author().id.get();
+    let ctx_data: &Data = ctx.data();
+    let roblox_client: &roboat::Client = &ctx_data.roblox_client;
+    let db_client: &async_sqlite::Client = &ctx_data.db_client;  
+    let author_id: u64 = ctx.author().id.get();
     let roblox_id_in_db: Result<u64, async_sqlite::Error> = get_roblox_id_in_db_by_discord_id(db_client, author_id).await;
     
     if !roblox_id_in_db.is_ok() { // Fail-check
@@ -291,21 +292,40 @@ pub async fn verify(
 
         // TODO: Also update roles depending on data in game
 
-        reply
-            .edit(
-                ctx,
-                poise::CreateReply::default()
-                    .content("") // Clear text, leave only embed
-                    .embed(
-                        CreateEmbed::default()
-                            .title("Verified Account!")
-                            .description(
-                                "Thank you for verification!\nOnce the game comes out you will be able to update your roles, depending on your data ingame :D"
-                            )
-                            .color(Colour::from_rgb(80, 255, 80))
-                    )
-            )
-            .await?;
+        let successfully_gave_member_role: Result<(), serenity::Error> = ctx.author_member().await.unwrap().add_role(ctx, ctx_data.member_role_id).await;
+        if !successfully_gave_member_role.is_ok() {
+            reply
+                .edit(
+                    ctx,
+                    poise::CreateReply::default()
+                        .content("") // Clear text, leave only embed
+                        .embed(
+                            CreateEmbed::default()
+                                .title("Verified Account!")
+                                .description(
+                                    "Thank you for verification!\nOnce the game comes out you will be able to update your roles, depending on your data ingame :D\n-# Failed to give out member role though! Please contact <@&1334231212851466311> for that.\n-# ".to_owned()+&successfully_gave_member_role.err().unwrap().to_string()
+                                )
+                                .color(Colour::from_rgb(80, 255, 80))
+                        )
+                )
+                .await?;
+        } else {
+            reply
+                .edit(
+                    ctx,
+                    poise::CreateReply::default()
+                        .content("") // Clear text, leave only embed
+                        .embed(
+                            CreateEmbed::default()
+                                .title("Verified Account!")
+                                .description(
+                                    "Thank you for verification!\nOnce the game comes out you will be able to update your roles, depending on your data ingame :D"
+                                )
+                                .color(Colour::from_rgb(80, 255, 80))
+                        )
+                )
+                .await?;
+        }
     }
 
     Ok(())
