@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use roboat::{thumbnails::{ThumbnailSize, ThumbnailType}, users::UsernameUserDetails};
-use serenity::all::{ButtonStyle, Colour, CreateActionRow, CreateButton, CreateEmbed};
+use serenity::all::{ButtonStyle, Colour, CreateActionRow, CreateButton, CreateEmbed, CreateInteractionResponseFollowup};
 
 use crate::{utils::{basic::parse_env_as_u64, db::{get_roblox_id_in_db_by_discord_id, update_roblox_id_in_db}}, Context, Data, Error};
 
@@ -233,7 +233,17 @@ pub async fn verify(
     let pressed_button_id = match &interaction {
         Some(m) => &m.data.custom_id,
         None => {
-            ctx.say("⚠ You didn't interact in time!\nRun the command again if you want to verify.").await?;
+            interaction.unwrap().create_followup(ctx, CreateInteractionResponseFollowup::default()
+                .embed(
+                    CreateEmbed::default()
+                        .title("⚠ You didn't interact in time!")
+                        .description(
+                            "Run the command again, if you want to verify."
+                        )
+                        .color(Colour::from_rgb(255, 255, 80))
+                )
+                .ephemeral(true)
+            ).await?;
             return Ok(());
         }
     };

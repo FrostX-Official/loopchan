@@ -1,0 +1,2 @@
+volumes:
+  - ./users.db:/root/loopchans-databases/users.db
