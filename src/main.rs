@@ -53,6 +53,7 @@ static PTL_PAID_TESTING_PRESENCE: Lazy<serenity::ActivityData> = Lazy::new(|| se
     url: None,
 });
 
+// Error Handler
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     match error {
         crate::FrameworkError::Setup { error, .. } => {

@@ -3,7 +3,7 @@ use std::time::Duration;
 use roboat::{thumbnails::{ThumbnailSize, ThumbnailType}, users::UsernameUserDetails};
 use serenity::all::{ButtonStyle, Colour, CreateActionRow, CreateButton, CreateEmbed};
 
-use crate::{utils::db::get_roblox_id_in_db_by_discord_id, Context, Error};
+use crate::{utils::db::{get_roblox_id_in_db_by_discord_id, update_roblox_id_in_db}, Context, Error};
 
 fn remove_whitespace(s: &str) -> String {
     s.chars().filter(|c| !c.is_whitespace()).collect()
@@ -19,7 +19,8 @@ pub async fn verify(
     // Check if user already has roblox_id in db
     let roblox_client: &roboat::Client = &ctx.data().roblox_client;
     let db_client: &async_sqlite::Client = &ctx.data().db_client;
-    let roblox_id_in_db: Result<u64, async_sqlite::Error> = get_roblox_id_in_db_by_discord_id(db_client, ctx.author().id.get()).await;
+    let author_id = ctx.author().id.get();
+    let roblox_id_in_db: Result<u64, async_sqlite::Error> = get_roblox_id_in_db_by_discord_id(db_client, author_id).await;
     
     if !roblox_id_in_db.is_ok() { // Fail-check
         ctx.send(poise::CreateReply::default()
@@ -274,13 +275,35 @@ pub async fn verify(
             return Ok(());
         }
 
-       // TODO: Change user's roblox_id in db to new, verified one (also update roles depending on data in game)
+        // Change user's roblox_id in db to new, verified one
+
+        let successfully_updated_data: Result<usize, async_sqlite::Error> = update_roblox_id_in_db(db_client, author_id, roblox_user_id).await;
+        if !successfully_updated_data.is_ok() {
+            reply
+                .edit(
+                    ctx,
+                    poise::CreateReply::default()
+                        .content("Failed to verify your account!\nPlease try again later or report this issue to <@908779319084589067>!\n-# ".to_owned()+&successfully_updated_data.err().unwrap().to_string()),
+                )
+                .await?;
+            return Ok(());
+        }
+
+        // TODO: Also update roles depending on data in game
 
         reply
             .edit(
                 ctx,
                 poise::CreateReply::default()
-                    .content("Work in progress."),
+                    .content("") // Clear text, leave only embed
+                    .embed(
+                        CreateEmbed::default()
+                            .title("Verified Account!")
+                            .description(
+                                "Thank you for verification!\nOnce the game comes out you will be able to update your roles, depending on your data ingame :D"
+                            )
+                            .color(Colour::from_rgb(80, 255, 80))
+                    )
             )
             .await?;
     }
