@@ -14,4 +14,6 @@ COPY ./src ./src
 RUN touch -a -m ./src/main.rs
 RUN cargo build --release
 
+RUN mkdir -p /data
+
 CMD ./target/release/loopchan
