@@ -1,3 +1,21 @@
+use super::basic::{check_env, parse_env_as_string};
+
+const DEFAULT_USERS_DATABASE_PATH: &'static str = "users.db";
+
+pub async fn create_users_db() -> Result<async_sqlite::Client, async_sqlite::Error> {
+    if check_env("USERS_DATABASE_PATH") {
+        return async_sqlite::ClientBuilder::new()
+            .path(parse_env_as_string("USERS_DATABASE_PATH"))
+            .open()
+            .await;
+    }
+
+    async_sqlite::ClientBuilder::new()
+        .path(DEFAULT_USERS_DATABASE_PATH)
+        .open()
+        .await
+}
+
 pub async fn prepare_users_db(db_client: &async_sqlite::Client) {
     db_client.conn(|conn: &async_sqlite::rusqlite::Connection| {
         conn.execute(

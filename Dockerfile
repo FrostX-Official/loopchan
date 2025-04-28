@@ -14,6 +14,8 @@ COPY ./src ./src
 RUN touch -a -m ./src/main.rs
 RUN cargo build --release
 
-RUN mkdir -p /data
+LABEL org.opencontainers.image.authors="frostx-official"
+LABEL org.opencontainers.image.source="https://github.com/frostx-official/loopchan"
+LABEL org.opencontainers.image.description="A discord bot written in Rust for PTL discord community."
 
 CMD ./target/release/loopchan

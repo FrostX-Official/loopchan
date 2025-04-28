@@ -1,13 +1,19 @@
 use crate::Context;
 
+use std::env;
+
 const MISSING_TEXT: &str = "missing ";
 
+pub fn check_env(key: &str) -> bool {
+    env::var(key).is_ok()
+}
+
 pub fn parse_env_as_string(key: &str) -> String {
-    std::env::var(key).expect(&(MISSING_TEXT.to_owned()+key)).parse().unwrap()
+    env::var(key).expect(&(MISSING_TEXT.to_owned()+key)).parse().unwrap()
 }
 
 pub fn parse_env_as_u64(key: &str) -> u64 {
-    std::env::var(key).expect(&(MISSING_TEXT.to_owned()+key)).parse().unwrap()
+    env::var(key).expect(&(MISSING_TEXT.to_owned()+key)).parse().unwrap()
 }
 
 pub async fn is_staff(ctx: Context<'_>, user: &serenity::model::user::User) -> bool {

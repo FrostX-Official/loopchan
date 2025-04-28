@@ -9,6 +9,8 @@ use ::serenity::all::EditMessage;
 use utils::basic::parse_env_as_string;
 use utils::basic::parse_env_as_u64;
 
+use utils::db::{create_users_db, prepare_users_db};
+
 // Logging
 use std::io::Write;
 use env_logger::Builder;
@@ -21,8 +23,6 @@ use roboat;
 
 mod commands;
 mod utils;
-
-use async_sqlite::ClientBuilder;
 
 // #[derive(Default)]
 // #[derive(Debug)]
@@ -357,12 +357,8 @@ async fn main() {
         .init();
 
     // Loopchan's Database
-    let sqlite_client: async_sqlite::Client = ClientBuilder::new()
-        .path(parse_env_as_string("USERS_DATABASE_PATH"))
-        .open()
-        .await.expect("Failed connecting to users database");
-
-    utils::db::prepare_users_db(&sqlite_client).await;
+    let sqlite_client: async_sqlite::Client = create_users_db().await.expect("Failed connecting to users database");
+    prepare_users_db(&sqlite_client).await;
 
     // Loopchan's Poise Framework
     let framework = poise::Framework::builder()
