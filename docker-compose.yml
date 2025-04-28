@@ -1,8 +1,12 @@
+version: '3.8'
+
 services:
-  sqlite:
-    image: nouchka/sqlite3:latest
+  app:
+    build: .
     volumes:
-      - loopchan:/db
+      - users_db_data:/usr/src/app
+    environment:
+      - USERS_DATABASE_PATH=/usr/src/app/users.db
 
 volumes:
-  loopchan:
+  users_db_data:
