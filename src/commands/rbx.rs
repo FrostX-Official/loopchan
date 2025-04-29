@@ -233,6 +233,9 @@ pub async fn verify(
     let pressed_button_id = match &interaction {
         Some(m) => &m.data.custom_id,
         None => {
+            if interaction.is_none() {
+                return Ok(());
+            }
             interaction.unwrap().create_followup(ctx, CreateInteractionResponseFollowup::default()
                 .embed(
                     CreateEmbed::default()
