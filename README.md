@@ -1,6 +1,10 @@
 ### My first ever actual rust program (and yes, it's a discord bot for my game community.)
 People are saying that it's hard to write bad code in Rust, this project proves 'em wrong. 😼
 
+## Rewrite needed
+Currently loopchan uses `async-sqlite` for it's database.
+It is planned to move to other db for loopchan to become docker-compatible.
+
 ## .ENV ->
 ```
 LOOPCHAN_DISCORD_TOKEN
