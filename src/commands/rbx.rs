@@ -10,7 +10,7 @@ fn remove_whitespace(s: &str) -> String {
 }
 
 /// Verify your Discord account by linking it to your Roblox account
-#[poise::command(slash_command, global_cooldown=1, user_cooldown=5)]
+#[poise::command(slash_command, global_cooldown=2, user_cooldown=10)]
 pub async fn verify(
     ctx: Context<'_>,
     #[min_length = 2] #[description = "Roblox Username"] roblox_username: Option<String>,

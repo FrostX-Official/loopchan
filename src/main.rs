@@ -1,11 +1,14 @@
 use dotenv::dotenv;
+
 use poise::CreateReply;
 use ::serenity::all::ChannelId;
 use ::serenity::all::Colour;
+use ::serenity::all::CommandInteraction;
 use ::serenity::all::ComponentInteraction;
 use ::serenity::all::CreateAllowedMentions;
 use ::serenity::all::CreateEmbed;
 use ::serenity::all::EditMessage;
+
 use utils::basic::parse_env_as_string;
 use utils::basic::parse_env_as_u64;
 
@@ -245,6 +248,31 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     }
 }
 
+async fn handle_slash_command(
+    _ctx: &serenity::Context,
+    _event: &serenity::FullEvent,
+    framework: poise::FrameworkContext<'_, Data, Error>,
+    _data: &Data,
+    command: &CommandInteraction
+) -> Result<(), Error> {
+    println!("{}", command.data.name);
+    if command.data.name == "verify" { // Verify has custom cooldown
+        return Ok(());
+    }
+
+    let framework_commands = &framework.options().commands;
+
+    let poise_command: Option<&poise::Command<Data, Box<(dyn std::error::Error + std::marker::Send + Sync + 'static)>>> = framework_commands
+        .iter()
+        .filter_map(|cmd| if cmd.name == command.data.name { Some(cmd) } else { None }).next();
+
+    let _poise_command = poise_command.unwrap();
+
+    // TODO: Add a cooldown to command (~2 seconds ?)
+
+    Ok(())
+}
+
 async fn handle_message_component(
     ctx: &serenity::Context,
     _event: &serenity::FullEvent,
@@ -331,7 +359,10 @@ async fn event_handler(
         serenity::FullEvent::InteractionCreate { interaction } => { // Different interactions handling
             // Message Component
             let is_component: Option<ComponentInteraction> = interaction.clone().into_message_component();
-            if !is_component.is_none() { handle_message_component(ctx, event,  framework, data, &is_component.unwrap()).await?; }
+            if !is_component.is_none() { return handle_message_component(ctx, event,  framework, data, &is_component.unwrap()).await; }
+
+            let is_slash_command: Option<CommandInteraction> = interaction.clone().into_command();
+            if !is_slash_command.is_none() { return handle_slash_command(ctx, event,  framework, data, &is_slash_command.unwrap()).await; }
         }
         _ => {}
     }
@@ -369,27 +400,6 @@ async fn main() {
                 commands::rbx::verify(),
                 commands::qa::qa()
             ],
-            // TODO: Work on giving every command cooldown through command check
-            // command_check: Some(|ctx| {
-            //     Box::pin(async move {
-            //         let mut cooldown_tracker = ctx.command().cooldowns.lock().unwrap();
-
-            //         let mut cooldown_durations: poise::CooldownConfig = poise::CooldownConfig::default();
-
-            //         let remaining_cooldown = cooldown_tracker.remaining_cooldown(ctx.cooldown_context(), &cooldown_durations);
-            //         cooldown_durations.user = Some(std::time::Duration::from_secs(5));
-    
-            //         match remaining_cooldown {
-            //             Some(remaining) => {
-            //                 return Err(format!("Please wait {} seconds", remaining.as_secs()).into())
-            //             }
-            //             None => {
-            //                 cooldown_tracker.start_cooldown(ctx.cooldown_context())
-            //             },
-            //         }
-            //         Ok(true)
-            //     })
-            // }),
             event_handler: |ctx, event, framework, data| {
                 Box::pin(event_handler(ctx, event, framework, data))
             },
