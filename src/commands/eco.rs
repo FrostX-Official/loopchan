@@ -11,6 +11,31 @@ fn exp_needed_to_next_level(level: u64) -> u64 {
     return (((level * 100) as f64) * 1.25).ceil() as u64;
 }
 
+pub async fn handle_user_exp_update(
+    db_client: &async_sqlite::Client, // db client to index economics in
+    userid: u64, // User ID to index in db
+    level: u64, // User's level before adding experience
+    experience: u64, // New experience (not the one in db)
+) -> Result<usize, async_sqlite::Error> {
+    let mut level: u64 = level;
+    let mut experience: u64 = experience;
+    let mut experience_needed: u64 = exp_needed_to_next_level(level);
+
+    if experience_needed <= experience {
+        loop {
+            if experience_needed > experience {
+                break
+            }
+            experience -= experience_needed;
+            level += 1;
+            experience_needed = exp_needed_to_next_level(level);
+            info!("{} leveled up! ({} lvl now, experience: {}/{})", userid, level, experience, experience_needed);
+        }
+    }
+
+    update_user_level_and_experience_in_eco_db(db_client, userid, Some(level), Some(experience)).await
+}
+
 pub async fn give_user_eco_exp(
     custom_data: &crate::Data,
     user: serenity::model::user::User,
@@ -42,29 +67,14 @@ pub async fn give_user_eco_exp(
         return;
     }
 
-    let mut level: u64 = level_and_exp_checks.0.unwrap();
+    let level: u64 = level_and_exp_checks.0.unwrap();
     let mut experience: u64 = level_and_exp_checks.1.unwrap();
-
-    let mut experience_needed: u64 = exp_needed_to_next_level(level);
 
     experience += amount;
 
-    if experience_needed <= experience {
-        loop {
-            if experience_needed > experience {
-                break
-            }
-            experience -= experience_needed;
-            level += 1;
-            experience_needed = exp_needed_to_next_level(level);
-            info!("{} leveled up! ({} lvl now, experience: {}/{})", userid, level, experience, experience_needed);
-        }
-    }
-
-    let successfully_updated: Result<usize, async_sqlite::Error> = update_user_level_and_experience_in_eco_db(&custom_data.db_client, userid, Some(level), Some(experience)).await;
+    let successfully_updated: Result<usize, async_sqlite::Error> = handle_user_exp_update(&custom_data.db_client, userid, level, experience).await;
     if successfully_updated.is_err() {
-        warn!("Failed to update user ({}) in eco db: {}", userid, successfully_created.unwrap_err().to_string());
-        return;
+        warn!("Failed to update user ({}) in eco db: {}", userid, successfully_updated.unwrap_err().to_string());
     }
 }
 
@@ -88,13 +98,52 @@ pub async fn modify_data(
         return Ok(());
     }
 
+    let db_client: &async_sqlite::Client = &ctx.data().db_client;
+
     let nuser: serenity::model::user::User;
     if user.is_none() {
         nuser = ctx.author().clone();
     } else {
         nuser = user.unwrap();
     }
-    let successful: Result<usize, async_sqlite::Error> = update_user_level_and_experience_in_eco_db(&ctx.data().db_client, nuser.id.get(), level, experience).await;
+    let nuser_id: u64 = nuser.id.get();
+
+    let successful: Result<usize, async_sqlite::Error>;
+    if experience.is_some() {
+        let actual_level: u64;
+
+        if level.is_some() {
+            actual_level = level.unwrap()
+        } else {
+            let level_exp_check: Result<(Result<u64, async_sqlite::rusqlite::Error>, Result<u64, async_sqlite::rusqlite::Error>), async_sqlite::Error> = get_user_level_and_experience_in_eco_db(db_client, nuser_id).await;
+        
+            if level_exp_check.is_err() {
+                warn!("Failed to check {}'s level and experience: {}", nuser_id, level_exp_check.unwrap_err().to_string());
+                ctx.send(poise::CreateReply::default()
+                    .content("Failed to modify data! (check console~)")
+                    .ephemeral(true)
+                ).await?;
+                return Ok(());
+            }
+
+            let level_and_exp_checks: (Result<u64, async_sqlite::rusqlite::Error>, Result<u64, async_sqlite::rusqlite::Error>) = level_exp_check.unwrap();
+
+            if level_and_exp_checks.0.is_err() {
+                warn!("Failed to check {}'s level: {}", nuser_id, level_and_exp_checks.0.unwrap_err().to_string());
+                ctx.send(poise::CreateReply::default()
+                    .content("Failed to modify data! (check console~)")
+                    .ephemeral(true)
+                ).await?;
+                return Ok(());
+            }
+
+            actual_level = level_and_exp_checks.0.unwrap();
+        }
+
+        successful = handle_user_exp_update(db_client, nuser_id, actual_level, experience.unwrap()).await;
+    } else {
+        successful = update_user_level_and_experience_in_eco_db(db_client, nuser_id, level, experience).await;
+    }
 
     if successful.is_ok() {
         ctx.send(poise::CreateReply::default()
