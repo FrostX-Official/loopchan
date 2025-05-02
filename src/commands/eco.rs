@@ -1,7 +1,7 @@
 use crate::{Context, Error};
 
 use serenity::all::{Color, CreateEmbed};
-use tracing::{warn, debug};
+use tracing::{warn, info};
 
 use crate::utils::db::{create_user_in_eco_db, get_user_balance_in_eco_db, get_user_level_and_experience_in_eco_db, update_user_level_and_experience_in_eco_db};
 
@@ -57,7 +57,7 @@ pub async fn give_user_eco_exp(
             experience -= experience_needed;
             level += 1;
             experience_needed = exp_needed_to_next_level(level);
-            debug!("{} leveled up! ({} lvl now, experience: {}/{})", userid, level, experience, experience_needed);
+            info!("{} leveled up! ({} lvl now, experience: {}/{})", userid, level, experience, experience_needed);
         }
     }
 

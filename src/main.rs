@@ -22,7 +22,7 @@ use std::time::Instant;
 // Logging
 use chrono::Local;
 use tracing::level_filters::LevelFilter;
-use tracing::{info, warn, error, debug};
+use tracing::{info, warn, error};
 use tracing_appender::rolling;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
@@ -260,7 +260,6 @@ async fn handle_slash_command(
     _data: &Data,
     command: &CommandInteraction
 ) -> Result<(), Error> {
-    debug!("{}", command.data.name);
     if command.data.name == "verify" { // Verify has custom cooldown
         return Ok(());
     }
@@ -380,7 +379,7 @@ async fn event_handler(
                 commands::eco::give_user_eco_exp(data, new_message.author.clone(), exp_amount).await;
                 *last_exp_time = Instant::now();
             } else {
-                debug!("Tried to give {} exp after message, but it's on cooldown", userid)
+                info!("Tried to give {} exp after message, but it's on cooldown", userid)
             }
         }
         _ => {}
@@ -403,7 +402,8 @@ async fn main() {
         .with_ansi(false)
         .with_target(false)
         .with_span_events(FmtSpan::CLOSE)
-        .with_filter(LevelFilter::DEBUG);
+        .event_format(tracing_subscriber::fmt::format().compact())
+        .with_filter(LevelFilter::INFO);
 
     let terminal_layer = tracing_subscriber::fmt::layer()
         .with_ansi(true)
@@ -442,7 +442,7 @@ async fn main() {
                 let custom_data: &Data = ctx.data();
 
                 Box::pin(async move {
-                    debug!("@{} ({}) executing command: \"{}\"", author.name, author.id, ctx.command().name);
+                    info!("@{} ({}) executing command: \"{}\"", author.name, author.id, ctx.command().name);
 
                     create_user_in_users_db(&custom_data.db_client, author_id, 0).await.expect("Failed to create user in users database in pre-command hook!");
                     create_user_in_eco_db(&custom_data.db_client, author_id).await.expect("Failed to create user in economics database in pre-command hook!");
