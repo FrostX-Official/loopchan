@@ -3,7 +3,6 @@ use dotenv::dotenv;
 use poise::CreateReply;
 use ::serenity::all::ChannelId;
 use ::serenity::all::Colour;
-use ::serenity::all::CommandInteraction;
 use ::serenity::all::ComponentInteraction;
 use ::serenity::all::CreateAllowedMentions;
 use ::serenity::all::CreateEmbed;
@@ -35,18 +34,6 @@ use roboat;
 
 mod commands;
 mod utils;
-
-// #[derive(Default)]
-// #[derive(Debug)]
-// pub struct LoopchanUser {
-//     discord_id: u64,
-//     roblox_id: u64,
-//     staff: bool,
-//     qa: bool,
-//     //prime: bool,
-//     //alpha: bool,
-//     //beta: bool,
-// }
 
 // Data, which is stored and accessible in all command invocations
 #[allow(dead_code)]
@@ -253,30 +240,6 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     }
 }
 
-async fn handle_slash_command(
-    _ctx: &serenity::Context,
-    _event: &serenity::FullEvent,
-    framework: poise::FrameworkContext<'_, Data, Error>,
-    _data: &Data,
-    command: &CommandInteraction
-) -> Result<(), Error> {
-    if command.data.name == "verify" { // Verify has custom cooldown
-        return Ok(());
-    }
-
-    let framework_commands = &framework.options().commands;
-
-    let poise_command: Option<&poise::Command<Data, Box<(dyn std::error::Error + std::marker::Send + Sync + 'static)>>> = framework_commands
-        .iter()
-        .filter_map(|cmd| if cmd.name == command.data.name { Some(cmd) } else { None }).next();
-
-    let _poise_command = poise_command.unwrap();
-
-    // TODO: Add a cooldown to command (~2 seconds ?)
-
-    Ok(())
-}
-
 async fn handle_message_component(
     ctx: &serenity::Context,
     _event: &serenity::FullEvent,
@@ -363,10 +326,7 @@ async fn event_handler(
         serenity::FullEvent::InteractionCreate { interaction } => { // Different interactions handling
             // Message Component
             let is_component: Option<ComponentInteraction> = interaction.clone().into_message_component();
-            if !is_component.is_none() { return handle_message_component(ctx, event,  framework, data, &is_component.unwrap()).await; }
-
-            let is_slash_command: Option<CommandInteraction> = interaction.clone().into_command();
-            if !is_slash_command.is_none() { return handle_slash_command(ctx, event,  framework, data, &is_slash_command.unwrap()).await; }
+            if !is_component.is_none() { return handle_message_component(ctx, event, framework, data, &is_component.unwrap()).await; }
         }
         serenity::FullEvent::Message { new_message } => {
             if new_message.author.bot { return Ok(()); }
@@ -433,6 +393,42 @@ async fn main() {
                 commands::qa::qa(),
                 commands::eco::eco(),
             ],
+            command_check: Some(|ctx| {
+                Box::pin(async move {
+                    let mut cooldown_durations = poise::CooldownConfig::default();
+                    cooldown_durations.user = Some(std::time::Duration::from_secs(parse_env_as_u64("ALL_COMMANDS_COOLDOWN")));
+
+                    let cc: poise::CooldownContext = poise::CooldownContext {
+                        user_id: ctx.author().id,
+                        channel_id: ctx.channel_id(),
+                        guild_id: ctx.guild_id()
+                    };
+
+                    let remaining_cooldown = {
+                        let cooldown_tracker = ctx.command().cooldowns.lock().unwrap();
+                        cooldown_tracker.remaining_cooldown(cc.clone(), &cooldown_durations)
+                    };
+
+                    match remaining_cooldown {
+                        Some(remaining) => {
+                            let error_msg = format!("You're too fast! Please wait `{}` seconds before retrying", remaining.as_secs());
+                            //warn!(error_msg);
+
+                            ctx.send(poise::CreateReply::default()
+                                .content(error_msg)
+                                .ephemeral(true)
+                            ).await?;
+                            Err(format!("Cooldown {} seconds", remaining.as_secs()).into())
+                        }
+                        None => {
+                            // Moved to post_command hook
+                            //let mut cooldown_tracker = ctx.command().cooldowns.lock().unwrap();
+                            //cooldown_tracker.start_cooldown(cc);
+                            Ok(true)
+                        },
+                    }
+                })
+            }),
             event_handler: |ctx, event, framework, data| {
                 Box::pin(event_handler(ctx, event, framework, data))
             },
@@ -448,6 +444,20 @@ async fn main() {
 
                     create_user_in_users_db(&custom_data.db_client, author_id, 0).await.expect("Failed to create user in users database in pre-command hook!");
                     create_user_in_eco_db(&custom_data.db_client, author_id).await.expect("Failed to create user in economics database in pre-command hook!");
+                })
+            },
+            post_command: |ctx| {
+                let author = ctx.author();
+                let cc: poise::CooldownContext = poise::CooldownContext {
+                    user_id: author.id,
+                    channel_id: ctx.channel_id(),
+                    guild_id: ctx.guild_id()
+                };
+                let mut cooldown_tracker = ctx.command().cooldowns.lock().unwrap();
+                cooldown_tracker.start_cooldown(cc);
+
+                Box::pin(async move {
+                    info!("@{} ({}) executed command: \"{}\"", author.name, author.id, ctx.command().name);
                 })
             },
             //manual_cooldowns: true,
