@@ -3,4 +3,3 @@
 target/
 logs/
 *.db
-Cargo.lock
