@@ -8,12 +8,13 @@ use crate::utils::db::{create_user_in_eco_db, get_user_balance_in_eco_db, get_us
 const LEVEL_PROGRESSBAR_SIZE: u64 = 18; // Progressbar: "[------------------]"
 
 fn exp_needed_to_next_level(level: u64) -> u64 {
-    return (((level * 100) as f64) * 1.25).ceil() as u64;
+    let level: f64 = level as f64;
+    return (5.0 * (level.powf(2.0)) + (50.0 * level) + 100.0).ceil() as u64;
 }
 
 pub async fn handle_user_exp_update(
     db_client: &async_sqlite::Client, // db client to index economics in
-    userid: u64, // User ID to index in db
+    userid: u64, // User ID to index in economics
     level: u64, // User's level before adding experience
     experience: u64, // New experience (not the one in db)
 ) -> Result<usize, async_sqlite::Error> {

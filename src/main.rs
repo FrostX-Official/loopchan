@@ -370,13 +370,14 @@ async fn event_handler(
         }
         serenity::FullEvent::Message { new_message } => {
             if new_message.author.bot { return Ok(()); }
+            if new_message.content.len() < 2 { return Ok(()); }
             let userid: u64 = new_message.author.id.get();
             let cooldown_duration: Duration = Duration::from_secs(10);
             let mut cooldowns = data.exp_cooldowns.lock().await;
             let last_exp_time = cooldowns.entry(userid).or_insert(Instant::now() - cooldown_duration);
 
             if last_exp_time.elapsed() >= cooldown_duration {
-                let exp_amount: u64 = new_message.content.len().min(10) as u64;
+                let exp_amount: u64 = new_message.content.len().min(25) as u64;
                 commands::eco::give_user_eco_exp(data, new_message.author.clone(), exp_amount).await;
                 *last_exp_time = Instant::now();
             } else {
