@@ -3,7 +3,7 @@ use std::time::Duration;
 use roboat::{thumbnails::{ThumbnailSize, ThumbnailType}, users::UsernameUserDetails};
 use serenity::all::{ButtonStyle, Colour, CreateActionRow, CreateButton, CreateEmbed, CreateInteractionResponseFollowup};
 
-use crate::{utils::{basic::parse_env_as_u64, db::{get_roblox_id_in_db_by_discord_id, update_roblox_id_in_db}}, Context, Data, Error};
+use crate::{utils::{basic::parse_env_as_u64, db::{get_roblox_id_in_users_db_by_discord_id, update_roblox_id_in_users_db}}, Context, Data, Error};
 
 fn remove_whitespace(s: &str) -> String {
     s.chars().filter(|c: &char| !c.is_whitespace()).collect()
@@ -21,7 +21,7 @@ pub async fn verify(
     let roblox_client: &roboat::Client = &ctx_data.roblox_client;
     let db_client: &async_sqlite::Client = &ctx_data.db_client;  
     let author_id: u64 = ctx.author().id.get();
-    let roblox_id_in_db: Result<u64, async_sqlite::Error> = get_roblox_id_in_db_by_discord_id(db_client, author_id).await;
+    let roblox_id_in_db: Result<u64, async_sqlite::Error> = get_roblox_id_in_users_db_by_discord_id(db_client, author_id).await;
     
     if !roblox_id_in_db.is_ok() { // Fail-check
         ctx.send(poise::CreateReply::default()
@@ -291,7 +291,7 @@ pub async fn verify(
 
         // Change user's roblox_id in db to new, verified one
 
-        let successfully_updated_data: Result<usize, async_sqlite::Error> = update_roblox_id_in_db(db_client, author_id, roblox_user_id).await;
+        let successfully_updated_data: Result<usize, async_sqlite::Error> = update_roblox_id_in_users_db(db_client, author_id, roblox_user_id).await;
         if !successfully_updated_data.is_ok() {
             reply
                 .edit(

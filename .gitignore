@@ -1,4 +1,6 @@
 .env
 .gitconfig
 target/
+logs/
 *.db
+Cargo.lock

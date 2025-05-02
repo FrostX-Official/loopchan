@@ -12,13 +12,22 @@ use ::serenity::all::EditMessage;
 use utils::basic::parse_env_as_string;
 use utils::basic::parse_env_as_u64;
 
-use utils::db::{create_users_db, prepare_users_db};
+use utils::db::{create_db, prepare_users_db, prepare_eco_db, create_user_in_users_db, create_user_in_eco_db};
+
+use tokio::sync::Mutex;
+use std::collections::HashMap;
+use std::time::Duration;
+use std::time::Instant;
 
 // Logging
-use std::io::Write;
-use env_logger::Builder;
 use chrono::Local;
-use log::LevelFilter;
+use tracing::level_filters::LevelFilter;
+use tracing::{info, warn, error, debug};
+use tracing_appender::rolling;
+use tracing_subscriber::fmt::format::FmtSpan;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::Layer;
 
 use poise::FrameworkError;
 use poise::serenity_prelude as serenity;
@@ -44,11 +53,7 @@ mod utils;
 struct Data {
     roblox_client: roboat::Client, // Used for interactions with Roblox API
     db_client: async_sqlite::Client, // Used for interactions with Loopchan's Database
-    // MOVED TO ENVIRONMENT ! READ ONLY FROM .ENV NOW
-    // guild_id: u64,
-    // staff_role_id: u64,
-    // qa_role_id: u64,
-    // member_role_id: u64
+    exp_cooldowns: Mutex<HashMap<u64, Instant>> // Used to cooldown economics exp add
 }
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -69,7 +74,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
         crate::FrameworkError::Setup { error, .. } => {
             eprintln!("Error in user data setup: {}", error);
         }
-        crate::FrameworkError::EventHandler { error, event, .. } => log::error!(
+        crate::FrameworkError::EventHandler { error, event, .. } => error!(
             "User event event handler encountered an error on {} event: {}",
             event.snake_case_name(),
             error
@@ -143,14 +148,14 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
             .await.expect("Failed to send error message");
         }
         crate::FrameworkError::CommandStructureMismatch { ctx, description, .. } => {
-            log::error!(
+            error!(
                 "Error: failed to deserialize interaction arguments for `/{}`: {}",
                 ctx.command.name,
                 description,
             );
         }
         crate::FrameworkError::CommandCheckFailed { ctx, error, .. } => {
-            log::error!(
+            error!(
                 "A command check failed in command {} for user {}: {:?}",
                 ctx.command().name,
                 ctx.author().name,
@@ -224,7 +229,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
                 .await.expect("Failed to send error message");
         }
         crate::FrameworkError::DynamicPrefix { error, msg, .. } => {
-            log::error!(
+            error!(
                 "Dynamic prefix failed for message {:?}: {}",
                 msg.content,
                 error
@@ -235,14 +240,14 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
             prefix,
             ..
         } => {
-            log::warn!(
+            warn!(
                 "Recognized prefix `{}`, but didn't recognize command name in `{}`",
                 prefix,
                 msg_content,
             );
         }
         crate::FrameworkError::UnknownInteraction { interaction, .. } => {
-            log::warn!("received unknown interaction \"{}\"", interaction.data.name);
+            warn!("received unknown interaction \"{}\"", interaction.data.name);
         }
         crate::FrameworkError::__NonExhaustive(unreachable) => match unreachable {},
     }
@@ -255,7 +260,7 @@ async fn handle_slash_command(
     _data: &Data,
     command: &CommandInteraction
 ) -> Result<(), Error> {
-    println!("{}", command.data.name);
+    debug!("{}", command.data.name);
     if command.data.name == "verify" { // Verify has custom cooldown
         return Ok(());
     }
@@ -284,7 +289,7 @@ async fn handle_message_component(
         let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(parse_env_as_u64("PTL_GUILD_ID")).unwrap().channels.clone();
         let qa_forms_channel = ptl_channels.get(&parse_env_as_u64("QA_FORMS_CHANNEL_ID").into());
         if qa_forms_channel.is_none() {
-            log::warn!("Failed to get QA Forms Channel while user was accepting QA invitation!");
+            warn!("Failed to get QA Forms Channel while user was accepting QA invitation!");
             return Ok(());
         }
 
@@ -297,7 +302,7 @@ async fn handle_message_component(
             )
         ).await?;
 
-        log::warn!("@{} ({}) have accepted QA Team invitation!", component.user.name, component.user.id);
+        info!("@{} ({}) have accepted QA Team invitation!", component.user.name, component.user.id);
         component.message.clone().edit(ctx, 
             EditMessage::default()
             .embed(
@@ -315,7 +320,7 @@ async fn handle_message_component(
         let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(parse_env_as_u64("PTL_GUILD_ID")).unwrap().channels.clone();
         let qa_forms_channel = ptl_channels.get(&parse_env_as_u64("QA_FORMS_CHANNEL_ID").into());
         if qa_forms_channel.is_none() {
-            log::warn!("Failed to get QA Forms Channel while user was accepting QA invitation!");
+            warn!("Failed to get QA Forms Channel while user was accepting QA invitation!");
             return Ok(());
         }
 
@@ -328,7 +333,7 @@ async fn handle_message_component(
             )
         ).await?;
 
-        log::warn!("@{} ({}) have declined QA Team invitation!", component.user.name, component.user.id);
+        info!("@{} ({}) have declined QA Team invitation!", component.user.name, component.user.id);
         component.message.clone().edit(ctx, 
             EditMessage::default()
             .embed(
@@ -354,7 +359,7 @@ async fn event_handler(
 ) -> Result<(), Error> {
     match event {
         serenity::FullEvent::Ready { data_about_bot, .. } => { // Print bot's username on startup
-            log::warn!("Logged in as {}", data_about_bot.user.name);
+            warn!("Logged in as {}", data_about_bot.user.name);
         }
         serenity::FullEvent::InteractionCreate { interaction } => { // Different interactions handling
             // Message Component
@@ -363,6 +368,20 @@ async fn event_handler(
 
             let is_slash_command: Option<CommandInteraction> = interaction.clone().into_command();
             if !is_slash_command.is_none() { return handle_slash_command(ctx, event,  framework, data, &is_slash_command.unwrap()).await; }
+        }
+        serenity::FullEvent::Message { new_message } => {
+            let userid: u64 = new_message.author.id.get();
+            let cooldown_duration: Duration = Duration::from_secs(10);
+            let mut cooldowns = data.exp_cooldowns.lock().await;
+            let last_exp_time = cooldowns.entry(userid).or_insert(Instant::now() - cooldown_duration);
+
+            if last_exp_time.elapsed() >= cooldown_duration {
+                let exp_amount: u64 = new_message.content.len().min(10) as u64;
+                commands::eco::give_user_eco_exp(data, new_message.author.clone(), exp_amount).await;
+                *last_exp_time = Instant::now();
+            } else {
+                debug!("Tried to give {} exp after message, but it's on cooldown", userid)
+            }
         }
         _ => {}
     }
@@ -375,21 +394,32 @@ async fn main() {
     dotenv().ok();
 
     // Logger
-    Builder::new()
-        .format(|buf: &mut env_logger::fmt::Formatter, record| {
-            writeln!(buf,
-                "{} [{}] - {}",
-                Local::now().format("%Y-%m-%dT%H:%M:%S"),
-                record.level(),
-                record.args()
-            ) 
-        })
-        .filter(None, LevelFilter::Warn)
+    let timern = Local::now().format("%Y-%m-%d %H-%M-%S");
+    let file_appender = rolling::never("logs", timern.to_string()+".log");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+
+    let log_file_layer = tracing_subscriber::fmt::layer()
+        .with_writer(non_blocking)
+        .with_ansi(false)
+        .with_target(false)
+        .with_span_events(FmtSpan::CLOSE)
+        .with_filter(LevelFilter::DEBUG);
+
+    let terminal_layer = tracing_subscriber::fmt::layer()
+        .with_ansi(true)
+        .with_target(false)
+        .with_span_events(FmtSpan::CLOSE)
+        .with_filter(LevelFilter::WARN);
+
+    tracing_subscriber::registry()
+        .with(log_file_layer)
+        .with(terminal_layer)
         .init();
 
     // Loopchan's Database
-    let sqlite_client: async_sqlite::Client = create_users_db().await.expect("Failed connecting to users database");
+    let sqlite_client: async_sqlite::Client = create_db().await.expect("Failed connecting to users database");
     prepare_users_db(&sqlite_client).await;
+    prepare_eco_db(&sqlite_client).await;
 
     // Loopchan's Poise Framework
     let framework = poise::Framework::builder()
@@ -398,7 +428,8 @@ async fn main() {
                 commands::debug::debug(),
                 commands::rbx::fetchdata(),
                 commands::rbx::verify(),
-                commands::qa::qa()
+                commands::qa::qa(),
+                commands::eco::eco(),
             ],
             event_handler: |ctx, event, framework, data| {
                 Box::pin(event_handler(ctx, event, framework, data))
@@ -411,9 +442,10 @@ async fn main() {
                 let custom_data: &Data = ctx.data();
 
                 Box::pin(async move {
-                    log::warn!("@{} ({}) executing command: \"{}\"", author.name, author.id, ctx.command().name);
+                    debug!("@{} ({}) executing command: \"{}\"", author.name, author.id, ctx.command().name);
 
-                    utils::db::create_user_in_db(&custom_data.db_client, author_id, 0).await.expect("Failed to create user in database in pre-command hook!");
+                    create_user_in_users_db(&custom_data.db_client, author_id, 0).await.expect("Failed to create user in users database in pre-command hook!");
+                    create_user_in_eco_db(&custom_data.db_client, author_id).await.expect("Failed to create user in economics database in pre-command hook!");
                 })
             },
             //manual_cooldowns: true,
@@ -423,7 +455,7 @@ async fn main() {
             ctx.set_activity(Some(PTL_PAID_TESTING_PRESENCE.clone()));
             ctx.dnd();
 
-            log::warn!("Ready!");
+            info!("Ready!");
 
             Box::pin(async move {
                 let ptl_guild_id: serenity::model::prelude::GuildId = parse_env_as_string("PTL_GUILD_ID").parse().unwrap();
@@ -433,7 +465,8 @@ async fn main() {
                 // Create global data for commands and hooks
                 Ok(Data {
                     roblox_client: roboat::ClientBuilder::new().build(),
-                    db_client: sqlite_client
+                    db_client: sqlite_client,
+                    exp_cooldowns: Mutex::new(HashMap::new())
                 })
             })
         })
@@ -447,6 +480,4 @@ async fn main() {
         .expect("Err creating client");
 
     client.start_autosharded().await.unwrap();
-
-    log::warn!("WILL THIS CODE RUN?");
 }
