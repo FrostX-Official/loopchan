@@ -148,7 +148,6 @@ pub async fn modify_data(
     if successful.is_ok() {
         ctx.send(poise::CreateReply::default()
             .content("Successful\n-# usize: ".to_owned()+&successful.unwrap().to_string())
-            .ephemeral(true)
         ).await?;
     } else {
         warn!("Failed to modify data: {}", successful.err().unwrap().to_string());
