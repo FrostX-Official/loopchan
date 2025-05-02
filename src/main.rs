@@ -369,6 +369,7 @@ async fn event_handler(
             if !is_slash_command.is_none() { return handle_slash_command(ctx, event,  framework, data, &is_slash_command.unwrap()).await; }
         }
         serenity::FullEvent::Message { new_message } => {
+            if new_message.author.bot { return Ok(()); }
             let userid: u64 = new_message.author.id.get();
             let cooldown_duration: Duration = Duration::from_secs(10);
             let mut cooldowns = data.exp_cooldowns.lock().await;
