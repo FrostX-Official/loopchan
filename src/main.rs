@@ -1,12 +1,19 @@
 use dotenv::dotenv;
 
-use poise::CreateReply;
 use ::serenity::all::ChannelId;
 use ::serenity::all::Colour;
 use ::serenity::all::ComponentInteraction;
 use ::serenity::all::CreateAllowedMentions;
 use ::serenity::all::CreateEmbed;
+use ::serenity::all::CreateMessage;
 use ::serenity::all::EditMessage;
+use ::serenity::all::EmojiId;
+
+use poise::CreateReply;
+use poise::FrameworkError;
+use poise::serenity_prelude as serenity;
+
+use roboat;
 
 use utils::basic::parse_env_as_string;
 use utils::basic::parse_env_as_u64;
@@ -28,10 +35,7 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::Layer;
 
-use poise::FrameworkError;
-use poise::serenity_prelude as serenity;
-use roboat;
-
+// Other modules ("cogs")
 mod commands;
 mod utils;
 
@@ -255,7 +259,7 @@ async fn handle_message_component(
             return Ok(());
         }
 
-        qa_forms_channel.unwrap().send_message(ctx,  serenity::all::CreateMessage::default()
+        qa_forms_channel.unwrap().send_message(ctx, CreateMessage::default()
             .embed(
                 CreateEmbed::default()
                     .title("QA Team Invitation")
@@ -286,7 +290,7 @@ async fn handle_message_component(
             return Ok(());
         }
 
-        qa_forms_channel.unwrap().send_message(ctx,  serenity::all::CreateMessage::default()
+        qa_forms_channel.unwrap().send_message(ctx, CreateMessage::default()
             .embed(
                 CreateEmbed::default()
                     .title("QA Team Invitation")
@@ -342,6 +346,34 @@ async fn event_handler(
                 *last_exp_time = Instant::now();
             } else {
                 info!("Tried to give {} exp after message, but it's on cooldown", userid)
+            }
+        }
+        serenity::FullEvent::GuildMemberAddition { new_member } => {
+            let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(parse_env_as_u64("PTL_GUILD_ID")).unwrap().channels.clone();
+            let welcomes_channel = ptl_channels.get(&parse_env_as_u64("WELCOME_CHANNEL_ID").into());
+            if welcomes_channel.is_none() {
+                warn!("Failed to find welcomes channel to welcome member in!");
+                return Ok(());
+            }
+
+            /*
+            TODO:
+            Tweak design and also create banners
+            (maybe even an image generator that has your "join count" like "hi you're member #5893689519351935891358915891289519591895")
+            (so basically just make good welcome message)
+            */
+            let welcome_message = welcomes_channel.unwrap().send_message(ctx,
+                CreateMessage::default()
+                    .content(format!("Welcome <@{}>! Hope you'll enjoy your stay.", new_member.user.id.get()))
+            ).await;
+
+            if welcome_message.is_ok() {
+                let welcome_react: serenity::model::prelude::ReactionType = serenity::ReactionType::Custom {
+                    animated: true,
+                    id: EmojiId::new(1367090774453522502),
+                    name: Some("wave".to_string())
+                };
+                welcome_message.unwrap().react(ctx, welcome_react).await?;
             }
         }
         _ => {}
@@ -411,14 +443,15 @@ async fn main() {
 
                     match remaining_cooldown {
                         Some(remaining) => {
-                            let error_msg = format!("You're too fast! Please wait `{}` seconds before retrying", remaining.as_secs());
+                            let remaining_precise: f64 = (remaining.as_millis() as f64)/1000.0;
+                            let error_msg = format!("You're too fast! Please wait `{}` seconds before retrying", remaining_precise);
                             //warn!(error_msg);
 
                             ctx.send(poise::CreateReply::default()
                                 .content(error_msg)
                                 .ephemeral(true)
                             ).await?;
-                            Err(format!("Cooldown {} seconds", remaining.as_secs()).into())
+                            Err(format!("Cooldown {} seconds", remaining_precise).into())
                         }
                         None => {
                             // Moved to post_command hook
