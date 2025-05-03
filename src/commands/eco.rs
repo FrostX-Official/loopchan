@@ -5,7 +5,9 @@ use tracing::{error, info, warn};
 
 use crate::utils::db::{create_user_in_eco_db, get_user_balance_in_eco_db, get_user_level_and_experience_in_eco_db, update_user_level_and_experience_in_eco_db};
 
-const LEVEL_PROGRESSBAR_SIZE: u64 = 18; // Progressbar: "[------------------]"
+// TODO: Move progressbar handling to utils
+const LEVEL_PROGRESSBAR_SIZE: u64 = 18;
+const LEVEL_PROGRESSBAR_LEADERBOARD_SIZE: u64 = 8;
 
 fn exp_needed_to_next_level(current_level: u64) -> u64 {
     let level: f64 = current_level as f64;
@@ -260,11 +262,43 @@ pub async fn level(
         return Ok(());
     }
 
+    let progressbar_size: u64 = LEVEL_PROGRESSBAR_SIZE;
     let level: u64 = level_and_exp_checks.0.unwrap();
     let experience: u64 = level_and_exp_checks.1.unwrap();
     let experience_needed: u64 = exp_needed_to_next_level(level);
-    let progress: u64 = ((experience as f64)/(experience_needed as f64)*(LEVEL_PROGRESSBAR_SIZE as f64)).floor() as u64;
-    let progressbar = format!("\n``[{}{}]``", (&"=".repeat(progress as usize)), (&"-".repeat((LEVEL_PROGRESSBAR_SIZE-progress) as usize)));
+    let progress_float: f64 = (experience as f64)/(experience_needed as f64)*(progressbar_size as f64);
+    let progress: u64 = progress_float.floor() as u64;
+    let progressbar: String;
+    if progress >= 1 {
+        if progress == 1 {
+            progressbar = format!("\n{}{}{}",
+                "<:LoopchanProgressbarFillStart:1368315375048986817>",
+                "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-2) as usize),
+                "<:LoopchanProgressbarEnd:1368315369722351617>"
+            );
+        } else {
+            progressbar = format!("\n{}{}{}{}",
+                "<:LoopchanProgressbarFillStart:1368315375048986817>",
+                "<:LoopchanProgressbarFillProgress:1368315373547683980>".repeat((progress-1) as usize),
+                "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-progress-1) as usize),
+                "<:LoopchanProgressbarEnd:1368315369722351617>"
+            );
+        }
+    } else {
+        if progress_float > 0.0 {
+            progressbar = format!("\n{}{}{}",
+                "<:LoopchanProgressbarFillStart:1368315375048986817>",
+                "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-2) as usize),
+                "<:LoopchanProgressbarEnd:1368315369722351617>"
+            );
+        } else {
+            progressbar = format!("\n{}{}{}",
+                "<:LoopchanProgressbarStart:1368315378404429914>",
+                "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-2) as usize),
+                "<:LoopchanProgressbarEnd:1368315369722351617>"
+            );
+        }
+    }
 
 
     ctx.send(poise::CreateReply::default()
@@ -297,19 +331,54 @@ pub async fn leaderboard(
 
         let mut response = String::from("");
         for (index, (discord_id, level, experience)) in lb.unwrap().iter().enumerate() {
+            let placement_emoji: &str;
             if index == 0 {
-                response.push_str(&format!("<a:WINNER:1367093328864346122> **1.** <@{}> •\n<:LoopchanLevel:1368298876842279072> Level: {}\n<:LoopchanExp:1368298874803982479> Experience: {}\n\n", discord_id, level, experience));
-                continue;
+                placement_emoji = "<a:WINNER:1367093328864346122>";
+            } else if index == 1 {
+                placement_emoji = ":second_place:";
+            } else if index == 2 {
+                placement_emoji = ":third_place:";
+            } else {
+                placement_emoji = "";
             }
-            if index == 1 {
-                response.push_str(&format!(":second_place: **2.** <@{}> •\n<:LoopchanLevel:1368298876842279072> Level: {}\n<:LoopchanExp:1368298874803982479> Experience: {}\n\n", discord_id, level, experience));
-                continue;
+
+            let progressbar_size: u64 = LEVEL_PROGRESSBAR_LEADERBOARD_SIZE;
+            let experience_needed: u64 = exp_needed_to_next_level(*level);
+            let progress_float: f64 = (*experience as f64)/(experience_needed as f64)*(progressbar_size as f64);
+            let progress: u64 = progress_float.floor() as u64;
+            let progressbar: String;
+            if progress >= 1 {
+                if progress == 1 {
+                    progressbar = format!("\n{}{}{}",
+                        "<:LoopchanProgressbarFillStart:1368315375048986817>",
+                        "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-2) as usize),
+                        "<:LoopchanProgressbarEnd:1368315369722351617>"
+                    );
+                } else {
+                    progressbar = format!("\n{}{}{}{}",
+                        "<:LoopchanProgressbarFillStart:1368315375048986817>",
+                        "<:LoopchanProgressbarFillProgress:1368315373547683980>".repeat((progress-1) as usize),
+                        "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-progress-1) as usize),
+                        "<:LoopchanProgressbarEnd:1368315369722351617>"
+                    );
+                }
+            } else {
+                if progress_float > 0.0 {
+                    progressbar = format!("\n{}{}{}",
+                        "<:LoopchanProgressbarFillStart:1368315375048986817>",
+                        "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-2) as usize),
+                        "<:LoopchanProgressbarEnd:1368315369722351617>"
+                    );
+                } else {
+                    progressbar = format!("\n{}{}{}",
+                        "<:LoopchanProgressbarStart:1368315378404429914>",
+                        "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-2) as usize),
+                        "<:LoopchanProgressbarEnd:1368315369722351617>"
+                    );
+                }
             }
-            if index == 2 {
-                response.push_str(&format!(":third_place: **3.** <@{}> •\n<:LoopchanLevel:1368298876842279072> Level: {}\n<:LoopchanExp:1368298874803982479> Experience: {}\n\n", discord_id, level, experience));
-                continue;
-            }
-            response.push_str(&format!("**{}.** <@{}> •\n<:LoopchanLevel:1368298876842279072> Level: {}\n<:LoopchanExp:1368298874803982479> Experience: {}\n\n", index + 1, discord_id, level, experience));
+
+            response.push_str(&format!("{} **{}.** <@{}> •\n<:LoopchanLevel:1368298876842279072> Level: {}\n<:LoopchanExp:1368298874803982479> Experience: {}/{}\n{}\n\n", placement_emoji, index + 1, discord_id, level, experience, experience_needed, progressbar));
         }
 
         response.push_str("-# Leaderboard is limited to 5 places.");
