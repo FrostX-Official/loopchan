@@ -2,7 +2,7 @@
 People are saying that it's hard to write bad code in Rust, this project proves 'em wrong. 😼
 
 ## .ENV ->
-```
+```py
 LOOPCHAN_DISCORD_TOKEN=String
 
 PTL_GUILD_ID=Integer
@@ -29,13 +29,20 @@ DATABASE_PATH=String (Optional)
 ```
 
 ## TODOs ->
-- Add cooldown to every command in main.rs -> handle_slash_command
-- Economic (loopcoins/tokens or smth and user level & exp)
-- Giveaways
-- Reaction Roles
+* Economics
+  * [x] Balance
+  * [x] Exp for chatting
+  * [x] Level System
+  * [ ] Level Leaderboard
+  * [ ] Custom Role Shop
+  * [ ] More admin commands (like customizing balance)
+
+* Giveaways
+* New Design
+  * [ ] Profile Picture
+  * [ ] Banner
 
 ## Unsure ->
-- Moderation
-- Logs
-<br>
-Moving all moderation and logs handling to loopchan can make it a bit heavy for current machine im using to host loopchan on, so not in main priority (probably never will be added)
+* Moderation
+* Logs
+<br><br>Moving all moderation and logs handling to loopchan can make it a bit heavy for current machine im using to host loopchan on, so not in main priority (probably never will be added)
