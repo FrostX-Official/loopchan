@@ -6,7 +6,7 @@ use ::serenity::all::{CreateAttachment, ChannelId, Color, CreateEmbed, CreateMes
 
 use poise::serenity_prelude as serenity;
 
-use crate::utils::basic::parse_env_as_u64;
+use crate::utils::basic::{parse_env_as_string, parse_env_as_u64};
 
 use tracing::{warn, error};
 
@@ -106,9 +106,9 @@ pub async fn welcomecard(
     if welcome_message.is_ok() {
         // warn!("sent {}'s welcome card", &new_member.user.name);
         let welcome_react: serenity::model::prelude::ReactionType = serenity::ReactionType::Custom {
-            animated: true,
-            id: EmojiId::new(1367090774453522502), // TODO: add to env
-            name: Some("wave".to_string())
+            animated: if parse_env_as_u64("WELCOME_MESSAGE_EMOJI_ANIMATED") == 1 { true } else { false },
+            id: EmojiId::new(parse_env_as_u64("WELCOME_MESSAGE_EMOJI_ID")),
+            name: Some(parse_env_as_string("WELCOME_MESSAGE_EMOJI_NAME"))
         };
         welcome_message.unwrap().react(ctx, welcome_react).await?;
     } else {

@@ -1,7 +1,9 @@
-use crate::{utils::basic::is_staff, Context, Error};
+use serenity::all::{ButtonStyle, Color, CreateActionRow, CreateButton, CreateEmbed, CreateMessage};
+
+use crate::{utils::basic::{is_staff, parse_env_as_string}, Context, Error};
 
 /// Bot Debug Commands
-#[poise::command(slash_command, subcommands("ping", "register", "wordgen"), subcommand_required)]
+#[poise::command(slash_command, subcommands("ping", "register", "wordgen", "postverificationchannellink"), subcommand_required)]
 pub async fn debug(_ctx: Context<'_>) -> Result<(), Error> { Ok(()) }
 
 /// Check bot latency
@@ -41,6 +43,43 @@ pub async fn wordgen(
         .content(format!("```{}```", randomwords.join("\n")))
         .ephemeral(true)
     ).await?;
+    Ok(())
+}
+
+/// Generate random word from wordgen module
+#[poise::command(slash_command)]
+pub async fn postverificationchannellink(
+    ctx: Context<'_>,
+) -> Result<(), Error> {
+    if !is_staff(ctx, ctx.author()).await {
+        ctx.send(poise::CreateReply::default()
+            .content("No Access.")
+            .ephemeral(true)
+        ).await?;
+        return Ok(());
+    }
+
+    ctx.channel_id().send_message(ctx, CreateMessage::default()
+        .add_embed(
+            CreateEmbed::default()
+                .description(format!("Type slash command: `/verify` with your Roblox Username **or** ID\nin <#{}> to proceed!", parse_env_as_string("UNVERIFIED_CHAT_CHANNEL_ID")))
+                .image("https://media.discordapp.net/attachments/1193463119532527646/1364308828195127366/PaJbaO4.png?ex=68170adc&is=6815b95c&hm=76a917c2e090636ba42d90299301f6d5dd99fa2f733b222c2ad6cc0131a3f186&=&width=1872&height=624")
+                .color(Color::from_rgb(255, 255, 255))
+        )
+        .components(vec![ // nesting hell
+            CreateActionRow::Buttons(vec![
+                CreateButton::new_link(format!("https://discord.com/channels/{}/{}", parse_env_as_string("PTL_GUILD_ID"), parse_env_as_string("UNVERIFIED_CHAT_CHANNEL_ID")))
+                    .label("Go to Unverified Chat")
+                    .style(ButtonStyle::Secondary)
+                    .emoji('💬'),
+        ])])
+    ).await?;
+
+    ctx.send(poise::CreateReply::default()
+        .content("sent")
+        .ephemeral(true)
+    ).await?;
+
     Ok(())
 }
 
