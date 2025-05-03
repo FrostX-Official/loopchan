@@ -26,6 +26,16 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::Layer;
+use tracing_subscriber::fmt::{time, format};
+
+struct LocalTime;
+
+impl time::FormatTime for LocalTime {
+    fn format_time(&self, w: &mut format::Writer<'_>) -> std::fmt::Result {
+        let now = Local::now();
+        write!(w, "{}", now.format("%Y-%m-%d %H:%M:%S%.3f"))
+    }
+}
 
 // Other modules ("cogs")
 mod handlers;
@@ -365,13 +375,14 @@ async fn main() {
         .with_ansi(false)
         .with_target(false)
         .with_span_events(FmtSpan::CLOSE)
-        .event_format(tracing_subscriber::fmt::format().compact())
+        .event_format(tracing_subscriber::fmt::format().with_timer(LocalTime).compact())
         .with_filter(LevelFilter::DEBUG);
 
     let terminal_layer = tracing_subscriber::fmt::layer()
         .with_ansi(true)
         .with_target(false)
         .with_span_events(FmtSpan::CLOSE)
+        .event_format(tracing_subscriber::fmt::format().with_timer(LocalTime).compact())
         .with_filter(LevelFilter::WARN);
 
     tracing_subscriber::registry()
