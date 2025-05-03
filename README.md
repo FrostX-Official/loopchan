@@ -33,7 +33,7 @@ DATABASE_PATH=String (Optional)
   * [x] Balance
   * [x] Exp for chatting
   * [x] Level System
-  * [ ] Level Leaderboard
+  * [x] Leaderboards
   * [ ] Custom Role Shop
   * [ ] More admin commands (like customizing balance)
 

@@ -1,14 +1,14 @@
-use crate::{Context, Error};
+use crate::{utils::db::{build_balance_leaderboard_from_eco_db, build_level_leaderboard_from_eco_db, get_user_placement_in_balance_leaderboard, get_user_placement_in_level_leaderboard}, Context, Error};
 
 use serenity::all::{Color, CreateEmbed};
-use tracing::{warn, info};
+use tracing::{error, info, warn};
 
 use crate::utils::db::{create_user_in_eco_db, get_user_balance_in_eco_db, get_user_level_and_experience_in_eco_db, update_user_level_and_experience_in_eco_db};
 
 const LEVEL_PROGRESSBAR_SIZE: u64 = 18; // Progressbar: "[------------------]"
 
-fn exp_needed_to_next_level(level: u64) -> u64 {
-    let level: f64 = level as f64;
+fn exp_needed_to_next_level(current_level: u64) -> u64 {
+    let level: f64 = current_level as f64;
     return (5.0 * (level.powf(2.0)) + (50.0 * level) + 100.0).ceil() as u64;
 }
 
@@ -80,7 +80,7 @@ pub async fn give_user_eco_exp(
 }
 
 /// Economics Commands
-#[poise::command(slash_command, subcommands("balance", "level", "modify_data"), subcommand_required)]
+#[poise::command(slash_command, subcommands("balance", "level", "modify_data", "leaderboard"), subcommand_required)]
 pub async fn eco(_ctx: Context<'_>) -> Result<(), Error> { Ok(()) }
 
 /// Modify user's level and/or experience.
@@ -107,6 +107,16 @@ pub async fn modify_data(
         &user.unwrap()
     };
     let nuser_id: u64 = nuser.id.get();
+    
+    let s = create_user_in_eco_db(db_client, nuser_id).await;
+    if s.is_err() {
+        error!("Failed to create user in db: {}", s.unwrap_err().to_string());
+        ctx.send(poise::CreateReply::default()
+            .content("Failed to create user in db! (check console~)")
+            .ephemeral(true)
+        ).await?;
+        return Ok(());
+    }
 
     let successful: Result<usize, async_sqlite::Error>;
     if experience.is_some() {
@@ -261,6 +271,100 @@ pub async fn level(
         .embed(CreateEmbed::default()
             .title(format!("{}'s Level Info", nuser.name))
             .description(format!("**Level:** {}\n**Experience:** {}/{}\n{}", level, experience, experience_needed, progressbar))
+            .color(Color::from_rgb(255, 255, 255))
+        )
+    ).await?;
+
+    Ok(())
+}
+
+#[derive(PartialEq)]
+#[derive(poise::ChoiceParameter)]
+pub enum LeaderboardType {
+    Level,
+    Balance,
+}
+
+/// Leaderboard
+#[poise::command(slash_command)]
+pub async fn leaderboard(
+    ctx: Context<'_>,
+    #[description = "Leaderboard Type"] lbtype: LeaderboardType
+) -> Result<(), Error> {
+    let db_client = &ctx.data().db_client;
+    if lbtype == LeaderboardType::Level {
+        let lb: Result<Vec<(u64, u64, u64)>, async_sqlite::Error> = build_level_leaderboard_from_eco_db(db_client).await;
+
+        let mut response = String::from("");
+        for (index, (discord_id, level, experience)) in lb.unwrap().iter().enumerate() {
+            if index == 0 {
+                response.push_str(&format!("<a:WINNER:1367093328864346122> **1.** <@{}> •\n<:LoopchanLevel:1368298876842279072> Level: {}\n<:LoopchanExp:1368298874803982479> Experience: {}\n\n", discord_id, level, experience));
+                continue;
+            }
+            if index == 1 {
+                response.push_str(&format!(":second_place: **2.** <@{}> •\n<:LoopchanLevel:1368298876842279072> Level: {}\n<:LoopchanExp:1368298874803982479> Experience: {}\n\n", discord_id, level, experience));
+                continue;
+            }
+            if index == 2 {
+                response.push_str(&format!(":third_place: **3.** <@{}> •\n<:LoopchanLevel:1368298876842279072> Level: {}\n<:LoopchanExp:1368298874803982479> Experience: {}\n\n", discord_id, level, experience));
+                continue;
+            }
+            response.push_str(&format!("**{}.** <@{}> •\n<:LoopchanLevel:1368298876842279072> Level: {}\n<:LoopchanExp:1368298874803982479> Experience: {}\n\n", index + 1, discord_id, level, experience));
+        }
+
+        response.push_str("-# Leaderboard is limited to 5 places.");
+        let placement: Result<u8, async_sqlite::Error> = get_user_placement_in_level_leaderboard(db_client, ctx.author().id.get()).await;
+        if placement.is_ok() {
+            response.push_str(&format!("\n-# Your placement is #{}.", placement.unwrap()));
+        } else {
+            response.push_str("\n-# Failed to fetch your placement.");
+            error!("Failed to fetch {}'s placement: {}", ctx.author().name, placement.unwrap_err().to_string());
+        }
+        
+        ctx.send(poise::CreateReply::default()
+            .embed(CreateEmbed::default()
+                .title("<a:qtstar:1367089440073318501> Level Leaderboard")
+                .description(response)
+                .color(Color::from_rgb(255, 255, 255))
+            )
+        ).await?;
+
+        return Ok(());
+    }
+
+    let lb: Result<Vec<(u64, u64)>, async_sqlite::Error> = build_balance_leaderboard_from_eco_db(db_client).await;
+
+    let mut response = String::from("");
+
+    for (index, (discord_id, balance)) in lb.unwrap().iter().enumerate() {
+        if index == 0 {
+            response.push_str(&format!("<a:WINNER:1367093328864346122> **1.** <@{}> •\n<:LoopchanCoin:1368311103238570025> Balance: {}\n\n", discord_id, balance));
+            continue;
+        }
+        if index == 1 {
+            response.push_str(&format!(":second_place: **2.** <@{}> •\n<:LoopchanCoin:1368311103238570025> Balance: {}\n\n", discord_id, balance,));
+            continue;
+        }
+        if index == 2 {
+            response.push_str(&format!(":third_place: **3.** <@{}> •\n<:LoopchanCoin:1368311103238570025> Balance: {}\n\n", discord_id, balance));
+            continue;
+        }
+        response.push_str(&format!("**{}.** <@{}> •\n<:LoopchanCoin:1368311103238570025> Balance: {}\n\n", index + 1, discord_id, balance));
+    }
+
+    response.push_str("-# Leaderboard is limited to 5 places.");
+    let placement: Result<u8, async_sqlite::Error> = get_user_placement_in_balance_leaderboard(db_client, ctx.author().id.get()).await;
+    if placement.is_ok() {
+        response.push_str(&format!("\n-# Your placement is #{}.", placement.unwrap()));
+    } else {
+        response.push_str("\n-# Failed to fetch your placement.");
+        error!("Failed to fetch {}'s placement: {}", ctx.author().name, placement.unwrap_err().to_string());
+    }
+    
+    ctx.send(poise::CreateReply::default()
+        .embed(CreateEmbed::default()
+            .title("<a:qtstar:1367089440073318501> Balance Leaderboard")
+            .description(response)
             .color(Color::from_rgb(255, 255, 255))
         )
     ).await?;

@@ -136,6 +136,73 @@ pub async fn get_user_level_and_experience_in_eco_db(
     }).await
 }
 
+pub async fn build_level_leaderboard_from_eco_db(db_client: &async_sqlite::Client) -> Result<Vec<(u64, u64, u64)>, async_sqlite::Error> {
+    db_client.conn(move |conn: &async_sqlite::rusqlite::Connection| {
+        let query = format!(
+            "SELECT discord_id, level, experience FROM economics ORDER BY level DESC, experience DESC LIMIT 5",
+        );
+    
+        let mut binding = conn.prepare(&query).unwrap();
+        let mut rows = binding.query([]).unwrap();
+        let mut leaderboard = Vec::new();
+    
+        while let Ok(Some(row)) = rows.next() {
+            let discord_id: u64 = row.get(0)?;
+            let level: u64 = row.get(1)?;
+            let experience: u64 = row.get(2)?;
+            leaderboard.push((discord_id, level, experience));
+        }
+    
+        Ok(leaderboard)
+    }).await
+}
+
+pub async fn get_user_placement_in_level_leaderboard(
+    db_client: &async_sqlite::Client,
+    discord_id: u64
+)-> Result<u8, async_sqlite::Error> {
+    db_client.conn(move |conn: &async_sqlite::rusqlite::Connection| {
+        conn.query_row(
+            "SELECT * FROM ( SELECT ROW_NUMBER() OVER (ORDER BY level DESC, experience DESC) AS RowNum, * FROM economics ) AS RowResults WHERE discord_id=?",
+            [discord_id],
+            |row| row.get(0),
+        )
+    }).await
+}
+
+pub async fn build_balance_leaderboard_from_eco_db(db_client: &async_sqlite::Client) -> Result<Vec<(u64, u64)>, async_sqlite::Error> {
+    db_client.conn(move |conn: &async_sqlite::rusqlite::Connection| {
+        let query = format!(
+            "SELECT discord_id, balance FROM economics ORDER BY balance DESC LIMIT 5",
+        );
+    
+        let mut binding = conn.prepare(&query).unwrap();
+        let mut rows = binding.query([]).unwrap();
+        let mut leaderboard = Vec::new();
+    
+        while let Ok(Some(row)) = rows.next() {
+            let discord_id: u64 = row.get(0)?;
+            let balance: u64 = row.get(1)?;
+            leaderboard.push((discord_id, balance));
+        }
+    
+        Ok(leaderboard)
+    }).await
+}
+
+pub async fn get_user_placement_in_balance_leaderboard(
+    db_client: &async_sqlite::Client,
+    discord_id: u64
+)-> Result<u8, async_sqlite::Error> {
+    db_client.conn(move |conn: &async_sqlite::rusqlite::Connection| {
+        conn.query_row(
+            "SELECT * FROM ( SELECT ROW_NUMBER() OVER (ORDER BY balance DESC) AS RowNum, * FROM economics ) AS RowResults WHERE discord_id=?",
+            [discord_id],
+            |row| row.get(0),
+        )
+    }).await
+}
+
 pub async fn update_user_level_and_experience_in_eco_db(
     db_client: &async_sqlite::Client,
     discord_id: u64,
