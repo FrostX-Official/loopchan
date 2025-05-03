@@ -336,7 +336,7 @@ async fn event_handler(
 
             if last_exp_time.elapsed() >= cooldown_duration {
                 let exp_amount: u64 = new_message.content.len().min(25) as u64;
-                commands::eco::give_user_eco_exp(data, new_message.author.clone(), exp_amount).await;
+                commands::eco::give_user_eco_exp(data, &new_message.author, exp_amount).await;
                 *last_exp_time = Instant::now();
             } else {
                 info!("Tried to give {} exp after message, but it's on cooldown", userid)
@@ -407,7 +407,7 @@ async fn main() {
 
                     let remaining_cooldown = {
                         let cooldown_tracker = ctx.command().cooldowns.lock().unwrap();
-                        cooldown_tracker.remaining_cooldown(cc.clone(), &cooldown_durations)
+                        cooldown_tracker.remaining_cooldown(cc, &cooldown_durations)
                     };
 
                     match remaining_cooldown {

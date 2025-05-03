@@ -39,7 +39,7 @@ pub async fn handle_user_exp_update(
 
 pub async fn give_user_eco_exp(
     custom_data: &crate::Data,
-    user: serenity::model::user::User,
+    user: &serenity::model::user::User,
     amount: u64
 ) {
     let userid: u64 = user.id.get();
@@ -101,12 +101,11 @@ pub async fn modify_data(
 
     let db_client: &async_sqlite::Client = &ctx.data().db_client;
 
-    let nuser: serenity::model::user::User;
-    if user.is_none() {
-        nuser = ctx.author().clone();
+    let nuser: &serenity::model::user::User = if user.is_none() {
+        ctx.author()
     } else {
-        nuser = user.unwrap();
-    }
+        &user.unwrap()
+    };
     let nuser_id: u64 = nuser.id.get();
 
     let successful: Result<usize, async_sqlite::Error>;
@@ -169,12 +168,11 @@ pub async fn balance(
 ) -> Result<(), Error> {
     let custom_data = ctx.data();
 
-    let nuser: serenity::model::user::User;
-    if user.is_none() {
-        nuser = ctx.author().clone();
+    let nuser: &serenity::model::user::User = if user.is_none() {
+        ctx.author()
     } else {
-        nuser = user.unwrap();
-    }
+        &user.unwrap()
+    };
 
     let nuser_id: u64 = nuser.id.into();
 
@@ -209,12 +207,11 @@ pub async fn level(
 ) -> Result<(), Error> {
     let custom_data = ctx.data();
 
-    let nuser: serenity::model::user::User;
-    if user.is_none() {
-        nuser = ctx.author().clone();
+    let nuser: &serenity::model::user::User = if user.is_none() {
+        ctx.author()
     } else {
-        nuser = user.unwrap();
-    }
+        &user.unwrap()
+    };
 
     let nuser_id: u64 = nuser.id.into();
 
@@ -262,7 +259,7 @@ pub async fn level(
 
     ctx.send(poise::CreateReply::default()
         .embed(CreateEmbed::default()
-            .title(nuser.name+"'s Level Info")
+            .title(format!("{}'s Level Info", nuser.name))
             .description(format!("**Level:** {}\n**Experience:** {}/{}\n{}", level, experience, experience_needed, progressbar))
             .color(Color::from_rgb(255, 255, 255))
         )
