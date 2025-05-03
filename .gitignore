@@ -2,4 +2,6 @@
 .gitconfig
 target/
 logs/
+temp/
 *.db
+Cargo.lock

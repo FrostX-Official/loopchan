@@ -148,7 +148,7 @@ pub async fn modify_data(
 
     if successful.is_ok() {
         ctx.send(poise::CreateReply::default()
-            .content("Successful\n-# usize: ".to_owned()+&successful.unwrap().to_string())
+            .content(format!("Successful\n-# usize: {}", successful.unwrap()))
         ).await?;
     } else {
         warn!("Failed to modify data: {}", successful.err().unwrap().to_string());
@@ -194,7 +194,7 @@ pub async fn balance(
     let balance: u64 = balance_check.unwrap();
 
     ctx.send(poise::CreateReply::default()
-        .content("<@".to_owned()+&nuser.id.to_string()+">'s Balance: "+&balance.to_string())
+        .content(format!("<@{}>'s Balance: {}", nuser.id, balance))
         .ephemeral(true)
     ).await?;
 
@@ -257,13 +257,13 @@ pub async fn level(
     let experience: u64 = level_and_exp_checks.1.unwrap();
     let experience_needed: u64 = exp_needed_to_next_level(level);
     let progress: u64 = ((experience as f64)/(experience_needed as f64)*(LEVEL_PROGRESSBAR_SIZE as f64)).floor() as u64;
-    let progressbar = "\n``[".to_owned()+(&"=".repeat(progress as usize))+(&"-".repeat((LEVEL_PROGRESSBAR_SIZE-progress) as usize))+"]``";
+    let progressbar = format!("\n``[{}{}]``", (&"=".repeat(progress as usize)), (&"-".repeat((LEVEL_PROGRESSBAR_SIZE-progress) as usize)));
+
 
     ctx.send(poise::CreateReply::default()
         .embed(CreateEmbed::default()
             .title(nuser.name+"'s Level Info")
-            .description("**Level:** ".to_owned()+&level.to_string()+
-                        "\n**Experience:** "+&experience.to_string()+"/"+&experience_needed.to_string()+&progressbar)
+            .description(format!("**Level:** {}\n**Experience:** {}/{}\n{}", level, experience, experience_needed, progressbar))
             .color(Color::from_rgb(255, 255, 255))
         )
     ).await?;

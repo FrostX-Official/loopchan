@@ -28,7 +28,7 @@ pub async fn verify(
             .embed(
                 CreateEmbed::default()
                     .title("An error occurred.")
-                    .description("Failed to find your data in database! Please try again later or report this issue to <@908779319084589067>!\n-# ".to_owned()+&roblox_id_in_db.err().unwrap().to_string())
+                    .description(format!("Failed to find your data in database! Please try again later or report this issue to <@908779319084589067>!\n-# {}", roblox_id_in_db.err().unwrap().to_string()))
                     .color(Colour::from_rgb(255, 80, 80))
             )
             .ephemeral(true)
@@ -45,7 +45,7 @@ pub async fn verify(
                 .embed(
                     CreateEmbed::default()
                         .title("Already verified!")
-                        .description("You're already verified!\n-# But loopchan failed to find info about your linked account... ? huh.. T-T\n-# ".to_owned()+&roblox_id_in_db_unwrapped.to_string())
+                        .description(format!("You're already verified!\n-# But loopchan failed to find info about your linked account... ? huh.. T-T\n-# {}", roblox_id_in_db_unwrapped))
                         .color(Colour::from_rgb(255, 80, 80))
                 )
                 .ephemeral(true)
@@ -62,7 +62,7 @@ pub async fn verify(
                     CreateEmbed::default()
                         .title("Already verified!")
                         .thumbnail(headshot_thubmnail.unwrap())
-                        .description("You're already verified as **@".to_owned()+&user_details_unwrapped.username+"**!\n-# "+&roblox_id_in_db_unwrapped.to_string())
+                        .description(format!("You're already verified as **@{}**!\n-# {}", user_details_unwrapped.username, roblox_id_in_db_unwrapped))
                         .color(Colour::from_rgb(255, 80, 80))
                 )
                 .ephemeral(true)
@@ -72,7 +72,7 @@ pub async fn verify(
                 .embed(
                     CreateEmbed::default()
                         .title("Already verified!")
-                        .description("You're already verified as **@".to_owned()+&user_details_unwrapped.username+"**!\n-# "+&roblox_id_in_db_unwrapped.to_string())
+                        .description(format!("You're already verified as **@{}**!\n-# {}", user_details_unwrapped.username, roblox_id_in_db_unwrapped))
                         .color(Colour::from_rgb(255, 80, 80))
                 )
                 .ephemeral(true)
@@ -198,10 +198,7 @@ pub async fn verify(
             CreateEmbed::default()
                 .title("Found User!")
                 .description(
-                    "Username: ".to_owned()+&roblox_username+"\nUser ID: "+&roblox_user_id.to_string()+
-                    "\n**Please confirm that this is your Roblox Account by changing your profile description to:**\n```"
-                    +&randomwords.join("\n")
-                    +"```\n## You have 5 minutes.\n-# You can change it back after verification process! (Make sure to save it though :D)"
+                    format!("Username: {}\nUser ID: {}\n**Please confirm that this is your Roblox Account by changing your profile description to:**\n```{}```\n## You have 5 minutes.\n-# You can change it back after verification process! (Make sure to save it though :D)", roblox_username, roblox_user_id, randomwords.join("\n"))
                 )
                 .color(Colour::from_rgb(255, 255, 100))
         )
@@ -293,11 +290,12 @@ pub async fn verify(
 
         let successfully_updated_data: Result<usize, async_sqlite::Error> = update_roblox_id_in_users_db(db_client, author_id, roblox_user_id).await;
         if !successfully_updated_data.is_ok() {
+            eprintln!("{}", &successfully_updated_data.err().unwrap().to_string());
             reply
                 .edit(
                     ctx,
                     poise::CreateReply::default()
-                        .content("Failed to verify your account!\nPlease try again later or report this issue to <@908779319084589067>!\n-# ".to_owned()+&successfully_updated_data.err().unwrap().to_string()),
+                        .content("Failed to verify your account!\nPlease try again later or report this issue to <@908779319084589067>!"),
                 )
                 .await?;
             return Ok(());
@@ -307,6 +305,7 @@ pub async fn verify(
 
         let successfully_gave_member_role: Result<(), serenity::Error> = ctx.author_member().await.unwrap().add_role(ctx, parse_env_as_u64("MEMBER_ROLE_ID")).await;
         if !successfully_gave_member_role.is_ok() {
+            eprintln!("{}", &successfully_gave_member_role.err().unwrap().to_string());
             reply
                 .edit(
                     ctx,
@@ -316,7 +315,7 @@ pub async fn verify(
                             CreateEmbed::default()
                                 .title("Verified Account!")
                                 .description(
-                                    "Thank you for verification!\nOnce the game comes out you will be able to update your roles, depending on your data ingame :D\n-# Failed to give out member role though! Please contact <@&1334231212851466311> for that.\n-# ".to_owned()+&successfully_gave_member_role.err().unwrap().to_string()
+                                    "Thank you for verification!\nOnce the game comes out you will be able to update your roles, depending on your data ingame :D\n-# Failed to give out member role though! Please contact <@&1334231212851466311> for that."
                                 )
                                 .color(Colour::from_rgb(80, 255, 80))
                         )

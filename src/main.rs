@@ -1,13 +1,7 @@
 use dotenv::dotenv;
 
-use ::serenity::all::ChannelId;
-use ::serenity::all::Colour;
-use ::serenity::all::ComponentInteraction;
-use ::serenity::all::CreateAllowedMentions;
-use ::serenity::all::CreateEmbed;
-use ::serenity::all::CreateMessage;
-use ::serenity::all::EditMessage;
-use ::serenity::all::EmojiId;
+use ::serenity::all::CreateAttachment;
+use ::serenity::all::{ChannelId, Color, ComponentInteraction, CreateAllowedMentions, CreateEmbed, CreateMessage, EditMessage, EmojiId};
 
 use poise::CreateReply;
 use poise::FrameworkError;
@@ -15,6 +9,7 @@ use poise::serenity_prelude as serenity;
 
 use roboat;
 
+use tokio::io::AsyncWriteExt;
 use utils::basic::parse_env_as_string;
 use utils::basic::parse_env_as_u64;
 
@@ -24,6 +19,13 @@ use tokio::sync::Mutex;
 use std::collections::HashMap;
 use std::time::Duration;
 use std::time::Instant;
+
+// Welcomecard generator
+use ab_glyph::{FontRef, PxScale, VariableFont};
+use image::{DynamicImage, Rgb, Rgba};
+use image::imageops::{overlay, resize, FilterType};
+use imageproc::drawing::draw_text_mut;
+use std::path::Path;
 
 // Logging
 use chrono::Local;
@@ -159,7 +161,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
             ..
         } => {
             let msg = format!(
-                "You're too fast! Please wait `{}` seconds before retrying",
+                "You're too fast!~ Please wait `{}` seconds before retrying!!",
                 remaining_cooldown.as_secs()
             );
             ctx.send(CreateReply::default().content(msg).ephemeral(true))
@@ -244,6 +246,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     }
 }
 
+
 async fn handle_message_component(
     ctx: &serenity::Context,
     _event: &serenity::FullEvent,
@@ -263,8 +266,8 @@ async fn handle_message_component(
             .embed(
                 CreateEmbed::default()
                     .title("QA Team Invitation")
-                    .description("@".to_owned()+&component.user.name+" (<@"+&component.user.id.to_string()+">) have accepted QA Team Invitation!")
-                    .color(Colour::from_rgb(100, 255, 100))
+                    .description(format!("@{} (<@{}>) have accepted QA Team Invitation!", component.user.name, component.user.id))
+                    .color(Color::from_rgb(100, 255, 100))
             )
         ).await?;
 
@@ -277,7 +280,7 @@ async fn handle_message_component(
                     .description(
                         "QA Form reviewers have been notified about your application."
                     )
-                    .color(Colour::from_rgb(255, 255, 255))
+                    .color(Color::from_rgb(255, 255, 255))
             ).components(vec![])
         ).await?;
 
@@ -294,8 +297,8 @@ async fn handle_message_component(
             .embed(
                 CreateEmbed::default()
                     .title("QA Team Invitation")
-                    .description("@".to_owned()+&component.user.name+" (<@"+&component.user.id.to_string()+">) have declined QA Team Invitation.")
-                    .color(Colour::from_rgb(255, 100, 100))
+                    .description(format!("@{} (<@{}>) have declined QA Team Invitation!", component.user.name, component.user.id))
+                    .color(Color::from_rgb(255, 100, 100))
             )
         ).await?;
 
@@ -308,7 +311,7 @@ async fn handle_message_component(
                     .description(
                         "You have declined the invitation."
                     )
-                    .color(Colour::from_rgb(255, 100, 100))
+                    .color(Color::from_rgb(255, 100, 100))
             ).components(vec![])
         ).await?;
         component.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
@@ -348,7 +351,8 @@ async fn event_handler(
                 info!("Tried to give {} exp after message, but it's on cooldown", userid)
             }
         }
-        serenity::FullEvent::GuildMemberAddition { new_member } => {
+        serenity::FullEvent::GuildMemberAddition { new_member } => { // WELCOMECARD // WELCOME MESSAGE
+            // warn!("{} joined ptl.", &new_member.user.name);
             let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(parse_env_as_u64("PTL_GUILD_ID")).unwrap().channels.clone();
             let welcomes_channel = ptl_channels.get(&parse_env_as_u64("WELCOME_CHANNEL_ID").into());
             if welcomes_channel.is_none() {
@@ -356,24 +360,88 @@ async fn event_handler(
                 return Ok(());
             }
 
-            /*
-            TODO:
-            Tweak design and also create banners
-            (maybe even an image generator that has your "join count" like "hi you're member #5893689519351935891358915891289519591895")
-            (so basically just make good welcome message)
-            */
-            let welcome_message = welcomes_channel.unwrap().send_message(ctx,
+            let member_count: u64 = ctx.cache.guild(parse_env_as_u64("PTL_GUILD_ID")).unwrap().member_count;
+
+            let mut image: image::ImageBuffer<Rgb<u8>, Vec<u8>> = image::open(Path::new("welcomecardtemplate.png")).unwrap().into();
+
+            let mut font: FontRef<'_> = FontRef::try_from_slice(include_bytes!("../CascadiaCode.ttf")).unwrap();
+            font.set_variation(b"lght", 400.0);
+
+            let scale: PxScale = PxScale { x: 74.0, y: 74.0, };
+            let (member_username, member_userid) = (&new_member.user.name, &new_member.user.id.get());
+
+            draw_text_mut(&mut image, Rgb([255, 255, 255]), 79, 582, scale, &font, member_username);
+            draw_text_mut(&mut image, Rgb([255, 255, 255]), 79, 656, scale, &font, &format!("you’re member #{}!", member_count));
+            
+            let mut image: image::ImageBuffer<Rgba<u8>, Vec<u8>> = DynamicImage::from(image).into();
+
+            let avatar_url = new_member.user.static_avatar_url();
+            if avatar_url.is_some() {
+                let avatar_url: String = avatar_url.unwrap();
+                let response: Result<roboat::reqwest::Response, roboat::reqwest::Error> = roboat::reqwest::get(&avatar_url).await;
+
+                if response.is_ok() { // nesting goesw hard
+                    let response: roboat::reqwest::Response = response.unwrap();
+                    let is_cool = response.status().is_success();
+                    if is_cool {
+                        // Download file into temp
+                        // https://cdn.discordapp.com/avatars/exampleid/examplehash.png?size=1024 >>> examplehash.png?size=1024 >>> examplehash.png
+                        let avatar_file_name = avatar_url.split("/").last().unwrap().split("?").next().unwrap();
+                        let avatar_path = format!("temp/{}", avatar_file_name);
+                        let mut file = tokio::fs::File::create(&avatar_path).await?;
+                        file.write_all(&response.bytes().await.unwrap().to_vec().as_slice()).await?;
+
+                        // Prepare and resize image
+                        let pfp_image: image::ImageBuffer<Rgba<u8>, Vec<u8>> = image::open(avatar_path).unwrap().into();
+                        let mut pfp_image: image::ImageBuffer<Rgba<u8>, Vec<u8>> = resize(&pfp_image, 256, 256, FilterType::Nearest);
+                        
+                        // Make pixels outside of circle radius (128) completely transparent :P
+                        for x in 0..=255 {
+                            for y in 0..=255 {
+                                if f64::hypot((x as f64) - 128.0, (y as f64) - 128.0) > 128.5 {
+                                    pfp_image.put_pixel(x, y, Rgba([0, 0, 0, 1]));
+                                    pfp_image.put_pixel(y, x, Rgba([0, 0, 0, 1]));
+                                }
+                            }
+                        }
+
+                        // Overlay pfp ontop of welcome image
+                        overlay(&mut image, &pfp_image, 1690, 95);
+                    }
+                }
+            }
+
+            // warn!("generated {}'s welcome card", &new_member.user.name);
+
+            let mut bytes: Vec<u8> = Vec::new();
+            image.write_to(&mut std::io::Cursor::new(&mut bytes), image::ImageFormat::Png)?;
+
+            // warn!("saved {}'s welcome card", &new_member.user.name);
+
+            let attachment: CreateAttachment = CreateAttachment::bytes(bytes, format!("welcomecard{}.gif", member_userid));
+            let filename = attachment.filename.clone();
+
+            let welcome_message: Result<serenity::model::prelude::Message, serenity::Error> = welcomes_channel.unwrap().send_message(ctx,
                 CreateMessage::default()
-                    .content(format!("Welcome <@{}>! Hope you'll enjoy your stay.", new_member.user.id.get()))
+                    .add_file(attachment)
+                    .embed(
+                        CreateEmbed::default()
+                            .description(format!("Welcome <@{}>! Hope you'll enjoy your stay.", member_userid))
+                            .attachment(filename)
+                            .color(Color::from_rgb(255, 255, 255))
+                    )
             ).await;
 
             if welcome_message.is_ok() {
+                // warn!("sent {}'s welcome card", &new_member.user.name);
                 let welcome_react: serenity::model::prelude::ReactionType = serenity::ReactionType::Custom {
                     animated: true,
-                    id: EmojiId::new(1367090774453522502),
+                    id: EmojiId::new(1367090774453522502), // TODO: add to env
                     name: Some("wave".to_string())
                 };
                 welcome_message.unwrap().react(ctx, welcome_react).await?;
+            } else {
+                error!("Failed to send {}'s welcome card: {}", &new_member.user.name, welcome_message.unwrap_err().to_string());
             }
         }
         _ => {}
@@ -397,7 +465,7 @@ async fn main() {
         .with_target(false)
         .with_span_events(FmtSpan::CLOSE)
         .event_format(tracing_subscriber::fmt::format().compact())
-        .with_filter(LevelFilter::INFO);
+        .with_filter(LevelFilter::DEBUG);
 
     let terminal_layer = tracing_subscriber::fmt::layer()
         .with_ansi(true)
@@ -444,7 +512,7 @@ async fn main() {
                     match remaining_cooldown {
                         Some(remaining) => {
                             let remaining_precise: f64 = (remaining.as_millis() as f64)/1000.0;
-                            let error_msg = format!("You're too fast! Please wait `{}` seconds before retrying", remaining_precise);
+                            let error_msg = format!("You're too fast!~ Please wait `{}` seconds before retrying!!", remaining_precise);
                             //warn!(error_msg);
 
                             ctx.send(poise::CreateReply::default()

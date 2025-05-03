@@ -13,7 +13,7 @@ pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
         ping_duration_str = String::from("Loading...");
     }
     ctx.send(poise::CreateReply::default()
-        .content("hiii!! hewwoo hiiii! :3\n-# Latency: ".to_owned()+&ping_duration_str) // what is this T-T
+        .content(format!("hiii!! hewwoo hiiii! :3\n-# Latency: {}", ping_duration_str)) // what is this T-T
         //.ephemeral(true)
     ).await?;
     Ok(())
@@ -38,7 +38,7 @@ pub async fn wordgen(
         randomwords.insert(0, crate::utils::wordgen::getrandomgenword().await);
     }
     ctx.send(poise::CreateReply::default()
-        .content("```".to_owned()+&randomwords.join("\n")+"```")
+        .content(format!("```{}```", randomwords.join("\n")))
         .ephemeral(true)
     ).await?;
     Ok(())

@@ -51,9 +51,7 @@ pub async fn sendform(
             CreateEmbed::default()
                 .title("QA Team Invitation")
                 .description(
-                    "Hello! You have been chosen to participate in closed **PARKOUR: The Loop** testing.\nSince you're a trusted member of our community we are sending you a link to QA form!\n\n***".to_owned()
-                        +&parse_env_as_string("QA_FORM_LINK")
-                        +"***\n\n*Please note that leaking this link is not allowed and will result in removing your testing access or (if you don't have one) permament ban from PTL!*\n-# Enjoy :D"
+                    format!("Hello! You have been chosen to participate in closed **PARKOUR: The Loop** testing.\nSince you're a trusted member of our community we are sending you a link to QA form!\n\n***{}***\n\n*Please note that leaking this link is not allowed and will result in removing your testing access or (if you don't have one) permament ban from PTL!*\n-# Enjoy :D", parse_env_as_string("QA_FORM_LINK"))
                 )
                 .color(Color::from_rgb(255, 255, 255))
         ).components(components)
@@ -66,7 +64,7 @@ pub async fn sendform(
         ).await?;
     } else {
         ctx.send(poise::CreateReply::default()
-            .content("Failed to send QA form link to user!\n-# ".to_owned()+&sent_message.err().unwrap().to_string())
+            .content(format!("Failed to send QA form link to user!\n-# {}", sent_message.err().unwrap().to_string()))
             .ephemeral(true)
         ).await?;
     }
