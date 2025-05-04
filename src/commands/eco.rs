@@ -1,13 +1,12 @@
-use crate::{utils::db::{build_balance_leaderboard_from_eco_db, build_level_leaderboard_from_eco_db, get_user_placement_in_balance_leaderboard, get_user_placement_in_level_leaderboard}, Context, Error};
+use crate::{utils::{basic::generate_emoji_progressbar, db::{build_balance_leaderboard_from_eco_db, build_level_leaderboard_from_eco_db, get_user_placement_in_balance_leaderboard, get_user_placement_in_level_leaderboard}}, Context, Error};
 
 use serenity::all::{Color, CreateEmbed};
 use tracing::{error, info, warn};
 
 use crate::utils::db::{create_user_in_eco_db, get_user_balance_in_eco_db, get_user_level_and_experience_in_eco_db, update_user_level_and_experience_in_eco_db};
 
-// TODO: Move progressbar handling to utils
-const LEVEL_PROGRESSBAR_SIZE: u64 = 18;
-const LEVEL_PROGRESSBAR_LEADERBOARD_SIZE: u64 = 8;
+const LEVEL_PROGRESSBAR_SIZE: u64 = 16;
+const LEVEL_PROGRESSBAR_LEADERBOARD_SIZE: u64 = 10;
 
 fn exp_needed_to_next_level(current_level: u64) -> u64 {
     let level: f64 = current_level as f64;
@@ -262,44 +261,10 @@ pub async fn level(
         return Ok(());
     }
 
-    let progressbar_size: u64 = LEVEL_PROGRESSBAR_SIZE;
     let level: u64 = level_and_exp_checks.0.unwrap();
     let experience: u64 = level_and_exp_checks.1.unwrap();
     let experience_needed: u64 = exp_needed_to_next_level(level);
-    let progress_float: f64 = (experience as f64)/(experience_needed as f64)*(progressbar_size as f64);
-    let progress: u64 = progress_float.floor() as u64;
-    let progressbar: String;
-    if progress >= 1 {
-        if progress == 1 {
-            progressbar = format!("\n{}{}{}",
-                "<:LoopchanProgressbarFillStart:1368315375048986817>",
-                "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-2) as usize),
-                "<:LoopchanProgressbarEnd:1368315369722351617>"
-            );
-        } else {
-            progressbar = format!("\n{}{}{}{}",
-                "<:LoopchanProgressbarFillStart:1368315375048986817>",
-                "<:LoopchanProgressbarFillProgress:1368315373547683980>".repeat((progress-1) as usize),
-                "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-progress-1) as usize),
-                "<:LoopchanProgressbarEnd:1368315369722351617>"
-            );
-        }
-    } else {
-        if progress_float > 0.0 {
-            progressbar = format!("\n{}{}{}",
-                "<:LoopchanProgressbarFillStart:1368315375048986817>",
-                "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-2) as usize),
-                "<:LoopchanProgressbarEnd:1368315369722351617>"
-            );
-        } else {
-            progressbar = format!("\n{}{}{}",
-                "<:LoopchanProgressbarStart:1368315378404429914>",
-                "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-2) as usize),
-                "<:LoopchanProgressbarEnd:1368315369722351617>"
-            );
-        }
-    }
-
+    let progressbar: String = generate_emoji_progressbar(experience, experience_needed, LEVEL_PROGRESSBAR_SIZE);
 
     ctx.send(poise::CreateReply::default()
         .embed(CreateEmbed::default()
@@ -342,41 +307,8 @@ pub async fn leaderboard(
                 placement_emoji = "";
             }
 
-            let progressbar_size: u64 = LEVEL_PROGRESSBAR_LEADERBOARD_SIZE;
             let experience_needed: u64 = exp_needed_to_next_level(*level);
-            let progress_float: f64 = (*experience as f64)/(experience_needed as f64)*(progressbar_size as f64);
-            let progress: u64 = progress_float.floor() as u64;
-            let progressbar: String;
-            if progress >= 1 {
-                if progress == 1 {
-                    progressbar = format!("\n{}{}{}",
-                        "<:LoopchanProgressbarFillStart:1368315375048986817>",
-                        "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-2) as usize),
-                        "<:LoopchanProgressbarEnd:1368315369722351617>"
-                    );
-                } else {
-                    progressbar = format!("\n{}{}{}{}",
-                        "<:LoopchanProgressbarFillStart:1368315375048986817>",
-                        "<:LoopchanProgressbarFillProgress:1368315373547683980>".repeat((progress-1) as usize),
-                        "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-progress-1) as usize),
-                        "<:LoopchanProgressbarEnd:1368315369722351617>"
-                    );
-                }
-            } else {
-                if progress_float > 0.0 {
-                    progressbar = format!("\n{}{}{}",
-                        "<:LoopchanProgressbarFillStart:1368315375048986817>",
-                        "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-2) as usize),
-                        "<:LoopchanProgressbarEnd:1368315369722351617>"
-                    );
-                } else {
-                    progressbar = format!("\n{}{}{}",
-                        "<:LoopchanProgressbarStart:1368315378404429914>",
-                        "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-2) as usize),
-                        "<:LoopchanProgressbarEnd:1368315369722351617>"
-                    );
-                }
-            }
+            let progressbar: String = generate_emoji_progressbar(*experience, experience_needed, LEVEL_PROGRESSBAR_LEADERBOARD_SIZE);
 
             response.push_str(&format!("{} **{}.** <@{}> •\n<:LoopchanLevel:1368298876842279072> Level: {}\n<:LoopchanExp:1368298874803982479> Experience: {}/{}\n{}\n\n", placement_emoji, index + 1, discord_id, level, experience, experience_needed, progressbar));
         }
