@@ -29,11 +29,25 @@ pub struct LoopchanConfig {
     database_path: Option<String>,
     welcomecard: WelcomecardConfig,
     roles: LoopchansRoles,
-    channels: LoopchansChannels
+    channels: LoopchansChannels,
+    progressbar_emojis: ProgressBarEmojisTypes,
 }
 
 impl TypeMapKey for LoopchanConfig {
     type Value = LoopchanConfig;
+}
+
+#[derive(Deserialize)]
+pub struct ProgressBarEmojisTypes {
+    empty: ProgressBarEmojis,
+    filled: ProgressBarEmojis,
+}
+
+#[derive(Deserialize)]
+pub struct ProgressBarEmojis {
+    start: String,
+    mid: String,
+    end: String,
 }
 
 #[derive(Deserialize)]

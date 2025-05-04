@@ -23,3 +23,13 @@ react=true # Should add reaction to welcomecard message?
 react_id=1367090774453522502 # Reaction ID
 react_name="wave" # Reaction Name
 react_animated=true # Is reaction animated?
+
+[progressbar_emojis] # Custom progress bar with emojis until ComponentsV2 support in serenity comes out # Please note that bot must be in the same server with emojis for it to work
+[progressbar_emojis.empty] # Empty Progress Bar
+start="<:LoopchanProgressbarStart:1368315378404429914>" # Empty Progress Bar Start
+mid="<:LoopchanProgressbarProgress:1368315376450146426>" # Empty Progress Bar Mid (progress)
+end="<:LoopchanProgressbarEnd:1368315369722351617>" # Empty Progress Bar End
+[progressbar_emojis.filled] # Filled Progress Bar
+start="<:LoopchanProgressbarFillStart:1368315375048986817>" # Filled Progress Bar Start
+mid="<:LoopchanProgressbarFillProgress:1368315373547683980>" # Filled Progress Bar Mid (progress)
+end="<:LoopchanProgressbarFillEnd:1368315371278565491>" # Filled Progress Bar End

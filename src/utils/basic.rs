@@ -12,37 +12,45 @@ pub async fn is_qa(ctx: Context<'_>, user: &serenity::model::user::User) -> bool
     user.has_role(ctx, config.guild, config.roles.qa).await.unwrap_or(false)
 }
 
-pub fn generate_emoji_progressbar(current: u64, max: u64, progressbar_size: u64) -> String {
+pub fn generate_emoji_progressbar(current: u64, max: u64, progressbar_size: u64, progressbar_emojis: &crate::ProgressBarEmojisTypes) -> String {
+    let fillstart = &progressbar_emojis.filled.start;
+    let fillmid = &progressbar_emojis.filled.mid;
+    // TODO: Add fillend usage
+    
+    let emptystart = &progressbar_emojis.empty.start;
+    let emptymid = &progressbar_emojis.empty.mid;
+    let emptyend = &progressbar_emojis.empty.end;
+
     let progress_float: f64 = (current as f64)/(max as f64)*(progressbar_size as f64);
     let progress: u64 = progress_float.floor() as u64;
     let progressbar: String;
     if progress >= 1 {
         if progress == 1 {
             progressbar = format!("\n{}{}{}",
-                "<:LoopchanProgressbarFillStart:1368315375048986817>",
-                "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-2) as usize),
-                "<:LoopchanProgressbarEnd:1368315369722351617>"
+                fillstart,
+                emptymid.repeat((progressbar_size-2) as usize),
+                emptyend
             );
         } else {
             progressbar = format!("\n{}{}{}{}",
-                "<:LoopchanProgressbarFillStart:1368315375048986817>",
-                "<:LoopchanProgressbarFillProgress:1368315373547683980>".repeat((progress-1) as usize),
-                "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-progress-1) as usize),
-                "<:LoopchanProgressbarEnd:1368315369722351617>"
+                fillstart,
+                fillmid.repeat((progress-1) as usize),
+                emptymid.repeat((progressbar_size-progress-1) as usize),
+                emptyend
             );
         }
     } else {
         if progress_float > 0.0 {
             progressbar = format!("\n{}{}{}",
-                "<:LoopchanProgressbarFillStart:1368315375048986817>",
-                "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-2) as usize),
-                "<:LoopchanProgressbarEnd:1368315369722351617>"
+                fillstart,
+                emptymid.repeat((progressbar_size-2) as usize),
+                emptyend
             );
         } else {
             progressbar = format!("\n{}{}{}",
-                "<:LoopchanProgressbarStart:1368315378404429914>",
-                "<:LoopchanProgressbarProgress:1368315376450146426>".repeat((progressbar_size-2) as usize),
-                "<:LoopchanProgressbarEnd:1368315369722351617>"
+                emptystart,
+                emptymid.repeat((progressbar_size-2) as usize),
+                emptyend
             );
         }
     }

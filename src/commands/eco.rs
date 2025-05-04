@@ -264,7 +264,7 @@ pub async fn level(
     let level: u64 = level_and_exp_checks.0.unwrap();
     let experience: u64 = level_and_exp_checks.1.unwrap();
     let experience_needed: u64 = exp_needed_to_next_level(level);
-    let progressbar: String = generate_emoji_progressbar(experience, experience_needed, LEVEL_PROGRESSBAR_SIZE);
+    let progressbar: String = generate_emoji_progressbar(experience, experience_needed, LEVEL_PROGRESSBAR_SIZE, &custom_data.config.progressbar_emojis);
 
     ctx.send(poise::CreateReply::default()
         .embed(CreateEmbed::default()
@@ -308,7 +308,7 @@ pub async fn leaderboard(
             }
 
             let experience_needed: u64 = exp_needed_to_next_level(*level);
-            let progressbar: String = generate_emoji_progressbar(*experience, experience_needed, LEVEL_PROGRESSBAR_LEADERBOARD_SIZE);
+            let progressbar: String = generate_emoji_progressbar(*experience, experience_needed, LEVEL_PROGRESSBAR_LEADERBOARD_SIZE, &ctx.data().config.progressbar_emojis);
 
             response.push_str(&format!("{} **{}.** <@{}> •\n<:LoopchanLevel:1368298876842279072> Level: {}\n<:LoopchanExp:1368298874803982479> Experience: {}/{}\n{}\n\n", placement_emoji, index + 1, discord_id, level, experience, experience_needed, progressbar));
         }
