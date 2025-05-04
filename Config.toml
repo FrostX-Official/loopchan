@@ -1,0 +1,25 @@
+title = "Loopchan's Config File"
+
+guild = 1334179500384059456 # PTL Guild ID
+owner = 908779319084589067 # Loopchan's Owner ID
+
+global_cooldown = 2 # Cooldown for all commands (may be 0 to disable)
+
+database_path = "loopchan.db" # Optional # Main Database Path (where users, economics tables are going to be stored in)
+
+[roles]
+qa = 1334803304403963965 # QA Role ID
+staff = 1334231212851466311 # Staff Role ID
+member = 1360707888900997332 # Member Role ID
+
+[channels]
+qa_forms=1366382858649731103 # QA Forms Channel ID
+unverified_chat=1364308262517997568 # Unverified Chat Channel ID
+
+[welcomecard]
+enabled=true # Should send welcomecard once user joins server?
+channel=1368184484645572718 # Where to send welcomecard
+react=true # Should add reaction to welcomecard message?
+react_id=1367090774453522502 # Reaction ID
+react_name="wave" # Reaction Name
+react_animated=true # Is reaction animated?

@@ -6,8 +6,6 @@ use ::serenity::all::{CreateAttachment, ChannelId, Color, CreateEmbed, CreateMes
 
 use poise::serenity_prelude as serenity;
 
-use crate::utils::basic::{parse_env_as_string, parse_env_as_u64};
-
 use tracing::{warn, error};
 
 use image::{DynamicImage, Rgb, Rgba};
@@ -19,17 +17,20 @@ type Error = Box<dyn std::error::Error + Send + Sync>;
 
 pub async fn welcomecard(
     ctx: &serenity::Context,
-    new_member: &Member
+    new_member: &Member,
+    data: &crate::Data
 ) -> Result<(), Error> {
     // warn!("{} joined ptl.", &new_member.user.name);
-    let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(parse_env_as_u64("PTL_GUILD_ID")).unwrap().channels.clone();
-    let welcomes_channel = ptl_channels.get(&parse_env_as_u64("WELCOME_CHANNEL_ID").into());
+    let loopchans_config = &data.config;
+    if !loopchans_config.welcomecard.enabled { return Ok(()) }
+    let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(loopchans_config.guild).unwrap().channels.clone();
+    let welcomes_channel = ptl_channels.get(&loopchans_config.welcomecard.channel.unwrap().into());
     if welcomes_channel.is_none() {
         warn!("Failed to find welcomes channel to welcome member in!");
         return Ok(());
     }
 
-    let member_count: u64 = ctx.cache.guild(parse_env_as_u64("PTL_GUILD_ID")).unwrap().member_count;
+    let member_count: u64 = ctx.cache.guild(loopchans_config.guild).unwrap().member_count;
 
     let mut image: image::ImageBuffer<Rgb<u8>, Vec<u8>> = image::open(Path::new("welcomecardtemplate.png")).unwrap().into();
 
@@ -105,10 +106,13 @@ pub async fn welcomecard(
 
     if welcome_message.is_ok() {
         // warn!("sent {}'s welcome card", &new_member.user.name);
+        if !loopchans_config.welcomecard.react.unwrap() {
+            return Ok(());
+        }
         let welcome_react: serenity::model::prelude::ReactionType = serenity::ReactionType::Custom {
-            animated: if parse_env_as_u64("WELCOME_MESSAGE_EMOJI_ANIMATED") == 1 { true } else { false },
-            id: EmojiId::new(parse_env_as_u64("WELCOME_MESSAGE_EMOJI_ID")),
-            name: Some(parse_env_as_string("WELCOME_MESSAGE_EMOJI_NAME"))
+            animated: loopchans_config.welcomecard.react_animated.unwrap(),
+            id: EmojiId::new(loopchans_config.welcomecard.react_id.unwrap()),
+            name: loopchans_config.welcomecard.react_name.clone()
         };
         welcome_message.unwrap().react(ctx, welcome_react).await?;
     } else {

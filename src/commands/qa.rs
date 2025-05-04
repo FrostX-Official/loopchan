@@ -1,7 +1,8 @@
+use std::env;
+
 use serenity::all::{ButtonStyle, Color, CreateActionRow, CreateButton, CreateEmbed};
 
-use crate::utils::basic::{is_qa, parse_env_as_string};
-use crate::{Context, Error};
+use crate::{utils::basic::is_qa, Context, Error};
 
 /// QA Managing Commands
 #[poise::command(slash_command, subcommands("sendform"), subcommand_required)]
@@ -51,7 +52,10 @@ pub async fn sendform(
             CreateEmbed::default()
                 .title("QA Team Invitation")
                 .description(
-                    format!("Hello! You have been chosen to participate in closed **PARKOUR: The Loop** testing.\nSince you're a trusted member of our community we are sending you a link to QA form!\n\n***{}***\n\n*Please note that leaking this link is not allowed and will result in removing your testing access or (if you don't have one) permament ban from PTL!*\n-# Enjoy :D", parse_env_as_string("QA_FORM_LINK"))
+                    format!(
+                        "Hello! You have been chosen to participate in closed **PARKOUR: The Loop** testing.\nSince you're a trusted member of our community we are sending you a link to QA form!\n\n***{}***\n\n*Please note that leaking this link is not allowed and will result in removing your testing access or (if you don't have one) permament ban from PTL!*\n-# Enjoy :D",
+                        &env::var("QA_FORM_LINK").expect("Missing QA_FORM_LINK in your environment.")
+                    )
                 )
                 .color(Color::from_rgb(255, 255, 255))
         ).components(components)

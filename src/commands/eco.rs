@@ -285,7 +285,7 @@ pub enum LeaderboardType {
 }
 
 /// Leaderboard
-#[poise::command(slash_command)]
+#[poise::command(slash_command, aliases("lb", "top"))]
 pub async fn leaderboard(
     ctx: Context<'_>,
     #[description = "Leaderboard Type"] lbtype: LeaderboardType
@@ -316,7 +316,7 @@ pub async fn leaderboard(
         response.push_str("-# Leaderboard is limited to 5 places.");
         let placement: Result<u8, async_sqlite::Error> = get_user_placement_in_level_leaderboard(db_client, ctx.author().id.get()).await;
         if placement.is_ok() {
-            response.push_str(&format!("\n-# Your placement is #{}.", placement.unwrap()));
+            response.push_str(&format!("\n-# Your placement is #{}. <a:haphap:1367093618967318618>", placement.unwrap()));
         } else {
             response.push_str("\n-# Failed to fetch your placement.");
             error!("Failed to fetch {}'s placement: {}", ctx.author().name, placement.unwrap_err().to_string());

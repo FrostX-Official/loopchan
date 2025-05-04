@@ -8,7 +8,7 @@ use poise::serenity_prelude as serenity;
 
 use roboat;
 
-use utils::basic::{parse_env_as_string, parse_env_as_u64};
+use ::serenity::prelude::TypeMapKey;
 
 use utils::db::{create_db, prepare_users_db, prepare_eco_db, create_user_in_users_db, create_user_in_eco_db};
 
@@ -16,6 +16,48 @@ use tokio::sync::Mutex;
 use std::collections::HashMap;
 use std::time::Duration;
 use std::time::Instant;
+
+// Config
+use serde::Deserialize;
+use toml;
+
+#[derive(Deserialize)]
+pub struct LoopchanConfig {
+    guild: u64,
+    owner: u64,
+    global_cooldown: u64,
+    database_path: Option<String>,
+    welcomecard: WelcomecardConfig,
+    roles: LoopchansRoles,
+    channels: LoopchansChannels
+}
+
+impl TypeMapKey for LoopchanConfig {
+    type Value = LoopchanConfig;
+}
+
+#[derive(Deserialize)]
+pub struct WelcomecardConfig {
+    enabled: bool,
+    channel: Option<u64>,
+    react: Option<bool>,
+    react_id: Option<u64>,
+    react_name: Option<String>,
+    react_animated: Option<bool>,
+}
+
+#[derive(Deserialize)]
+pub struct LoopchansRoles {
+    qa: u64,
+    staff: u64,
+    member: u64,
+}
+
+#[derive(Deserialize)]
+pub struct LoopchansChannels {
+    qa_forms: u64,
+    unverified_chat: u64
+}
 
 // Logging
 use chrono::Local;
@@ -47,7 +89,8 @@ mod utils;
 struct Data {
     roblox_client: roboat::Client, // Used for interactions with Roblox API
     db_client: async_sqlite::Client, // Used for interactions with Loopchan's Database
-    exp_cooldowns: Mutex<HashMap<u64, Instant>> // Used to cooldown economics exp add
+    exp_cooldowns: Mutex<HashMap<u64, Instant>>, // Used to cooldown economics exp add
+    config: LoopchanConfig
 }
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -252,12 +295,13 @@ async fn handle_message_component(
     ctx: &serenity::Context,
     _event: &serenity::FullEvent,
     _framework: poise::FrameworkContext<'_, Data, Error>,
-    _data: &Data,
+    data: &Data,
     component: &ComponentInteraction
 ) -> Result<(), Error> {
+    let loopchans_config = &data.config;
     if component.data.custom_id == "qa.invitation.accept" {
-        let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(parse_env_as_u64("PTL_GUILD_ID")).unwrap().channels.clone();
-        let qa_forms_channel = ptl_channels.get(&parse_env_as_u64("QA_FORMS_CHANNEL_ID").into());
+        let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(loopchans_config.guild).unwrap().channels.clone();
+        let qa_forms_channel = ptl_channels.get(&loopchans_config.channels.qa_forms.into());
         if qa_forms_channel.is_none() {
             warn!("Failed to get QA Forms Channel while user was accepting QA invitation!");
             return Ok(());
@@ -287,8 +331,8 @@ async fn handle_message_component(
 
         component.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
     } else if component.data.custom_id == "qa.invitation.deny" {
-        let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(parse_env_as_u64("PTL_GUILD_ID")).unwrap().channels.clone();
-        let qa_forms_channel = ptl_channels.get(&parse_env_as_u64("QA_FORMS_CHANNEL_ID").into());
+        let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(loopchans_config.guild).unwrap().channels.clone();
+        let qa_forms_channel = ptl_channels.get(&loopchans_config.channels.qa_forms.into());
         if qa_forms_channel.is_none() {
             warn!("Failed to get QA Forms Channel while user was accepting QA invitation!");
             return Ok(());
@@ -353,7 +397,7 @@ async fn event_handler(
             }
         }
         serenity::FullEvent::GuildMemberAddition { new_member } => { // WELCOMECARD // WELCOME MESSAGE
-            handlers::events::welcomecard::welcomecard(ctx, new_member).await?;
+            handlers::events::welcomecard::welcomecard(ctx, new_member, data).await?;
         }
         _ => {}
     }
@@ -390,8 +434,15 @@ async fn main() {
         .with(terminal_layer)
         .init();
 
+    let toml_string = tokio::fs::read_to_string("Config.toml").await;
+    if toml_string.is_err() {
+        error!("Failed to read your config.toml file: {}", toml_string.unwrap_err().to_string());
+        return;
+    }
+    let loopchans_config: LoopchanConfig = toml::from_str(&toml_string.unwrap()).unwrap();
+
     // Loopchan's Database
-    let sqlite_client: async_sqlite::Client = create_db().await.expect("Failed connecting to users database");
+    let sqlite_client: async_sqlite::Client = create_db(loopchans_config.database_path).await.expect("Failed connecting to users database");
     prepare_users_db(&sqlite_client).await;
     prepare_eco_db(&sqlite_client).await;
 
@@ -407,8 +458,9 @@ async fn main() {
             ],
             command_check: Some(|ctx| {
                 Box::pin(async move {
+                    let loopchans_config = &ctx.data().config;
                     let mut cooldown_durations = poise::CooldownConfig::default();
-                    cooldown_durations.user = Some(std::time::Duration::from_secs(parse_env_as_u64("ALL_COMMANDS_COOLDOWN")));
+                    cooldown_durations.user = Some(std::time::Duration::from_secs(loopchans_config.global_cooldown));
 
                     let cc: poise::CooldownContext = poise::CooldownContext {
                         user_id: ctx.author().id,
@@ -477,13 +529,22 @@ async fn main() {
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
-            ctx.set_activity(Some(PTL_PAID_TESTING_PRESENCE.clone()));
-            ctx.dnd();
-
-            info!("Ready!");
-
             Box::pin(async move {
-                let ptl_guild_id: serenity::model::prelude::GuildId = parse_env_as_string("PTL_GUILD_ID").parse().unwrap();
+                let toml_string = tokio::fs::read_to_string("Config.toml").await;
+                if toml_string.is_err() {
+                    let error_str = format!("Failed to read your config.toml file: {}", toml_string.unwrap_err().to_string());
+                    error!(error_str);
+                    return Err(error_str.into());
+                }
+
+                let loopchans_config: LoopchanConfig = toml::from_str(&toml_string.unwrap()).unwrap();
+
+                ctx.set_activity(Some(PTL_PAID_TESTING_PRESENCE.clone()));
+                ctx.dnd();
+
+                info!("Ready!");
+
+                let ptl_guild_id: serenity::model::prelude::GuildId = loopchans_config.guild.into();
                 // Register commands
                 //poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                 poise::builtins::register_in_guild(&ctx.http, &framework.options().commands, ptl_guild_id).await?;
@@ -491,7 +552,8 @@ async fn main() {
                 Ok(Data {
                     roblox_client: roboat::ClientBuilder::new().build(),
                     db_client: sqlite_client,
-                    exp_cooldowns: Mutex::new(HashMap::new())
+                    exp_cooldowns: Mutex::new(HashMap::new()),
+                    config: loopchans_config
                 })
             })
         })

@@ -1,12 +1,11 @@
-use super::basic::{check_env, parse_env_as_string};
 use tracing::warn;
 
 const DEFAULT_DATABASE_PATH: &'static str = "loopchan.db";
 
-pub async fn create_db() -> Result<async_sqlite::Client, async_sqlite::Error> {
-    if check_env("DATABASE_PATH") {
+pub async fn create_db(path: Option<String>) -> Result<async_sqlite::Client, async_sqlite::Error> {
+    if path.is_some() {
         return async_sqlite::ClientBuilder::new()
-            .path(parse_env_as_string("DATABASE_PATH"))
+            .path(path.unwrap())
             .open()
             .await;
     }
