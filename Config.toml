@@ -33,3 +33,7 @@ end="<:LoopchanProgressbarEnd:1368315369722351617>" # Empty Progress Bar End
 start="<:LoopchanProgressbarFillStart:1368315375048986817>" # Filled Progress Bar Start
 mid="<:LoopchanProgressbarFillProgress:1368315373547683980>" # Filled Progress Bar Mid (progress)
 end="<:LoopchanProgressbarFillEnd:1368315371278565491>" # Filled Progress Bar End
+
+[leveling]
+max_exp_per_message=40
+exp_multiplier=1

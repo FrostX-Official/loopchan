@@ -31,6 +31,7 @@ pub struct LoopchanConfig {
     roles: LoopchansRoles,
     channels: LoopchansChannels,
     progressbar_emojis: ProgressBarEmojisTypes,
+    leveling: LevelingConfig
 }
 
 impl TypeMapKey for LoopchanConfig {
@@ -48,6 +49,12 @@ pub struct ProgressBarEmojis {
     start: String,
     mid: String,
     end: String,
+}
+
+#[derive(Deserialize)]
+pub struct LevelingConfig {
+    max_exp_per_message: u64,
+    exp_multiplier: u64,
 }
 
 #[derive(Deserialize)]
@@ -403,7 +410,8 @@ async fn event_handler(
             let last_exp_time = cooldowns.entry(userid).or_insert(Instant::now() - cooldown_duration);
 
             if last_exp_time.elapsed() >= cooldown_duration {
-                let exp_amount: u64 = new_message.content.len().min(25) as u64;
+                let leveling_config = &data.config.leveling;
+                let exp_amount: u64 = new_message.content.len().min(leveling_config.max_exp_per_message as usize) as u64*leveling_config.exp_multiplier;
                 commands::eco::give_user_eco_exp(data, &new_message.author, exp_amount).await;
                 *last_exp_time = Instant::now();
             } else {
