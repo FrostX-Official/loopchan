@@ -1,4 +1,3 @@
-use chrono::Datelike;
 use dotenv::dotenv;
 
 use ::serenity::all::{ChannelId, Color, ComponentInteraction, CreateAllowedMentions, CreateEmbed, CreateMessage, EditMessage};
@@ -15,7 +14,6 @@ use utils::db::{create_db, prepare_users_db, prepare_eco_db, create_user_in_user
 
 use tokio::sync::Mutex;
 use std::collections::HashMap;
-use std::time::Duration;
 use std::time::Instant;
 
 // Config
@@ -404,30 +402,7 @@ async fn event_handler(
             if !is_component.is_none() { return handle_message_component(ctx, event, framework, data, &is_component.unwrap()).await; }
         }
         serenity::FullEvent::Message { new_message } => {
-            if new_message.author.bot { return Ok(()); }
-            if new_message.content.len() < 2 { return Ok(()); }
-            let userid: u64 = new_message.author.id.get();
-            let cooldown_duration: Duration = Duration::from_secs(10);
-            let mut cooldowns = data.exp_cooldowns.lock().await;
-            let last_exp_time = cooldowns.entry(userid).or_insert(Instant::now() - cooldown_duration);
-
-            if last_exp_time.elapsed() >= cooldown_duration {
-                let leveling_config = &data.config.leveling;
-                let mut weekday_multiplier: u64 = 1;
-                if leveling_config.double_multiplier_on_weekdays {
-                    let weekday: chrono::Weekday = chrono::offset::Local::now().date_naive().weekday();
-                    if weekday == chrono::Weekday::Sat {
-                        weekday_multiplier = 2
-                    } else if weekday == chrono::Weekday::Sun {
-                        weekday_multiplier = 2
-                    }
-                }
-                let exp_amount: u64 = new_message.content.len().min(leveling_config.max_exp_per_message as usize) as u64*leveling_config.exp_multiplier*weekday_multiplier;
-                commands::eco::give_user_eco_exp(data, &new_message.author, exp_amount).await;
-                *last_exp_time = Instant::now();
-            } else {
-                info!("Tried to give {} exp after message, but it's on cooldown", userid)
-            }
+            handlers::events::message::give_exp_for_message(new_message, data).await;
         }
         serenity::FullEvent::GuildMemberAddition { new_member } => { // WELCOMECARD // WELCOME MESSAGE
             handlers::events::welcomecard::welcomecard(ctx, new_member, data).await?;
