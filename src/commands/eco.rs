@@ -5,9 +5,6 @@ use tracing::{error, info, warn};
 
 use crate::utils::db::{create_user_in_eco_db, get_user_balance_in_eco_db, get_user_level_and_experience_in_eco_db, update_user_level_and_experience_in_eco_db};
 
-const LEVEL_PROGRESSBAR_SIZE: u64 = 16;
-const LEVEL_PROGRESSBAR_LEADERBOARD_SIZE: u64 = 10;
-
 fn exp_needed_to_next_level(current_level: u64) -> u64 {
     let level: f64 = current_level as f64;
     return (5.0 * (level.powf(2.0)) + (50.0 * level) + 100.0).ceil() as u64;
@@ -264,7 +261,7 @@ pub async fn level(
     let level: u64 = level_and_exp_checks.0.unwrap();
     let experience: u64 = level_and_exp_checks.1.unwrap();
     let experience_needed: u64 = exp_needed_to_next_level(level);
-    let progressbar: String = generate_emoji_progressbar(experience, experience_needed, LEVEL_PROGRESSBAR_SIZE, &custom_data.config.progressbar_emojis);
+    let progressbar: String = generate_emoji_progressbar(experience, experience_needed, custom_data.config.leveling.progrees_bar_size, &custom_data.config.progressbar_emojis);
 
     ctx.send(poise::CreateReply::default()
         .embed(CreateEmbed::default()
@@ -308,7 +305,8 @@ pub async fn leaderboard(
             }
 
             let experience_needed: u64 = exp_needed_to_next_level(*level);
-            let progressbar: String = generate_emoji_progressbar(*experience, experience_needed, LEVEL_PROGRESSBAR_LEADERBOARD_SIZE, &ctx.data().config.progressbar_emojis);
+            let custom_data = &ctx.data();
+            let progressbar: String = generate_emoji_progressbar(*experience, experience_needed, custom_data.config.leveling.progress_bar_in_leaderboard_size, &custom_data.config.progressbar_emojis);
 
             response.push_str(&format!("{} **{}.** <@{}> •\n<:LoopchanLevel:1368298876842279072> Level: {}\n<:LoopchanExp:1368298874803982479> Experience: {}/{}\n{}\n\n", placement_emoji, index + 1, discord_id, level, experience, experience_needed, progressbar));
         }

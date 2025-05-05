@@ -55,6 +55,8 @@ pub struct LevelingConfig {
     max_exp_per_message: u64,
     exp_multiplier: u64,
     double_multiplier_on_weekdays: bool,
+    progrees_bar_size: u64,
+    progress_bar_in_leaderboard_size: u64
 }
 
 #[derive(Deserialize)]
