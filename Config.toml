@@ -37,3 +37,4 @@ end="<:LoopchanProgressbarFillEnd:1368315371278565491>" # Filled Progress Bar En
 [leveling]
 max_exp_per_message=40
 exp_multiplier=1
+double_multiplier_on_weekdays=true
