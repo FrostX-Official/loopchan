@@ -18,6 +18,7 @@ Look into [Config.toml](/Config.toml) for description of config variables.
   * [x] Leaderboards
   * [ ] Custom Role Shop
   * [ ] More admin commands (like customizing balance)
+  * [ ] [last.fm stats commands](https://www.last.fm/api/scrobbling)
 
 * Giveaways
 * New Design
