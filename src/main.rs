@@ -72,7 +72,7 @@ pub struct WelcomecardConfig {
 #[derive(Deserialize)]
 pub struct LoopchansRoles {
     qa: u64,
-    staff: u64,
+//    staff: u64, // commented out to avoid deadcode warning for now
     member: u64,
 }
 

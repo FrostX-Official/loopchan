@@ -5,6 +5,8 @@ People are saying that it's hard to write bad code in Rust, this project proves 
 ```py
 LOOPCHAN_DISCORD_TOKEN=String
 QA_FORM_LINK=String
+LAST_FM_API_KEY=String
+LASM_FM_SHARED_SECRET=String
 ```
 
 ## Config ->
