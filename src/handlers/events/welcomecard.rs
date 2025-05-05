@@ -20,7 +20,6 @@ pub async fn welcomecard(
     new_member: &Member,
     data: &crate::Data
 ) -> Result<(), Error> {
-    // warn!("{} joined ptl.", &new_member.user.name);
     let loopchans_config = &data.config;
     if !loopchans_config.welcomecard.enabled { return Ok(()) }
     let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(loopchans_config.guild).unwrap().channels.clone();
@@ -83,12 +82,8 @@ pub async fn welcomecard(
         }
     }
 
-    // warn!("generated {}'s welcome card", &new_member.user.name);
-
     let mut bytes: Vec<u8> = Vec::new();
     image.write_to(&mut std::io::Cursor::new(&mut bytes), image::ImageFormat::Png)?;
-
-    // warn!("saved {}'s welcome card", &new_member.user.name);
 
     let attachment: CreateAttachment = CreateAttachment::bytes(bytes, format!("welcomecard{}.gif", member_userid));
     let filename = attachment.filename.clone();
@@ -105,7 +100,6 @@ pub async fn welcomecard(
     ).await;
 
     if welcome_message.is_ok() {
-        // warn!("sent {}'s welcome card", &new_member.user.name);
         if !loopchans_config.welcomecard.react.unwrap() {
             return Ok(());
         }

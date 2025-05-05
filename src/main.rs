@@ -489,8 +489,7 @@ async fn main() {
                         Some(remaining) => {
                             let remaining_precise: f64 = (remaining.as_millis() as f64)/1000.0;
                             let error_msg = format!("You're too fast!~ Please wait `{}` seconds before retrying!!", remaining_precise);
-                            //warn!(error_msg);
-
+                            
                             ctx.send(poise::CreateReply::default()
                                 .content(error_msg)
                                 .ephemeral(true)
