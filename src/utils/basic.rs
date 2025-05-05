@@ -1,6 +1,6 @@
 use crate::Context;
 
-pub async fn is_staff(ctx: Context<'_>, user: &serenity::model::user::User) -> bool {
+pub async fn _is_staff(ctx: Context<'_>, user: &serenity::model::user::User) -> bool { // Currently not useful, access to commands will be configured within server settings.
     let config = &ctx.data().config;
     if user.id == config.owner { return true; }
     user.has_role(ctx, config.guild, config.roles.staff).await.unwrap_or(false)

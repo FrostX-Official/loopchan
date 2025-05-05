@@ -113,7 +113,8 @@ struct Data {
     roblox_client: roboat::Client, // Used for interactions with Roblox API
     db_client: async_sqlite::Client, // Used for interactions with Loopchan's Database
     exp_cooldowns: Mutex<HashMap<u64, Instant>>, // Used to cooldown economics exp add
-    config: LoopchanConfig
+    config: LoopchanConfig,
+    log_file: String
 }
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -421,7 +422,8 @@ async fn main() {
 
     // Logger
     let timern = Local::now().format("%Y-%m-%d %H-%M-%S");
-    let file_appender = rolling::never("logs", timern.to_string()+".log");
+    let log_file: String = timern.to_string()+".log";
+    let file_appender = rolling::never("logs", &log_file);
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
     let log_file_layer = tracing_subscriber::fmt::layer()
@@ -563,7 +565,8 @@ async fn main() {
                     roblox_client: roboat::ClientBuilder::new().build(),
                     db_client: sqlite_client,
                     exp_cooldowns: Mutex::new(HashMap::new()),
-                    config: loopchans_config
+                    config: loopchans_config,
+                    log_file
                 })
             })
         })

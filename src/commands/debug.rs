@@ -1,9 +1,10 @@
 use serenity::all::{ButtonStyle, Color, CreateActionRow, CreateButton, CreateEmbed, CreateMessage};
 
-use crate::{utils::basic::is_staff, Context, Error};
+use crate::{Context, Error};
+use tracing::error;
 
 /// Bot Debug Commands
-#[poise::command(slash_command, subcommands("ping", "register", "wordgen", "postverificationchannellink"), subcommand_required)]
+#[poise::command(slash_command, subcommands("ping", "register", "wordgen", "postverificationchannellink", "clearlogs"), subcommand_required)]
 pub async fn debug(_ctx: Context<'_>) -> Result<(), Error> { Ok(()) }
 
 /// Check bot latency
@@ -27,14 +28,6 @@ pub async fn wordgen(
     ctx: Context<'_>,
     #[min_length = 1] #[max_length = 254] #[description = "Amount"] amount: u8
 ) -> Result<(), Error> {
-    if !is_staff(ctx, ctx.author()).await {
-        ctx.send(poise::CreateReply::default()
-            .content("No Access.")
-            .ephemeral(true)
-        ).await?;
-        return Ok(());
-    }
-
     let mut randomwords: Vec<String> = vec![];
     for _ in 0..amount+1 {
         randomwords.insert(0, crate::utils::wordgen::getrandomgenword().await);
@@ -46,19 +39,53 @@ pub async fn wordgen(
     Ok(())
 }
 
-/// Generate random word from wordgen module
 #[poise::command(slash_command)]
-pub async fn postverificationchannellink(
+pub async fn clearlogs(
     ctx: Context<'_>,
 ) -> Result<(), Error> {
-    if !is_staff(ctx, ctx.author()).await {
+    let log_file = &ctx.data().log_file;
+    let logs_read_successful: Result<tokio::fs::ReadDir, std::io::Error> = tokio::fs::read_dir("logs").await;
+
+    if logs_read_successful.is_err() {
+        error!("Failed to read logs: {}", logs_read_successful.unwrap_err().to_string());
         ctx.send(poise::CreateReply::default()
-            .content("No Access.")
+            .content("Failed to read logs. Check console.")
             .ephemeral(true)
         ).await?;
         return Ok(());
     }
 
+    let mut logs_read: tokio::fs::ReadDir = logs_read_successful.unwrap();
+
+    while let Some(entry) = logs_read.next_entry().await? {
+        let path: std::path::PathBuf = entry.path();
+        if path.to_str().unwrap() == "logs\\".to_owned()+log_file {
+            continue;
+        }
+        let is_successful: Result<(), std::io::Error> = tokio::fs::remove_file(&path).await;
+        if is_successful.is_err() {
+            error!("Failed to delete log \"{}\": {}", path.to_str().unwrap(), is_successful.unwrap_err().to_string());
+            ctx.send(poise::CreateReply::default()
+                .content("Failed to delete logs. Check console.")
+                .ephemeral(true)
+            ).await?;
+            return Ok(());
+        }
+    }
+
+    ctx.send(poise::CreateReply::default()
+        .content("Successful!")
+        .ephemeral(true)
+    ).await?;
+
+    Ok(())
+}
+
+/// Generate random word from wordgen module
+#[poise::command(slash_command)]
+pub async fn postverificationchannellink(
+    ctx: Context<'_>,
+) -> Result<(), Error> {
     let loopchans_config = &ctx.data().config;
     ctx.channel_id().send_message(ctx, CreateMessage::default()
         .add_embed(
@@ -87,14 +114,6 @@ pub async fn postverificationchannellink(
 /// Slash Commands Registering Handler
 #[poise::command(slash_command)]
 pub async fn register(ctx: Context<'_>) -> Result<(), Error> {
-    if !is_staff(ctx, ctx.author()).await {
-        ctx.send(poise::CreateReply::default()
-            .content("No Access.")
-            //.ephemeral(true)
-        ).await?;
-        return Ok(());
-    }
-
     poise::builtins::register_application_commands_buttons(ctx).await?;
     Ok(())
 }
