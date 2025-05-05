@@ -262,11 +262,13 @@ pub async fn level(
     let experience: u64 = level_and_exp_checks.1.unwrap();
     let experience_needed: u64 = exp_needed_to_next_level(level);
     let progressbar: String = generate_emoji_progressbar(experience, experience_needed, custom_data.config.leveling.progrees_bar_size, &custom_data.config.progressbar_emojis);
+    let percentage: f64 = experience as f64/experience_needed as f64 *100.0;
+    let percentage_text: String = format!("` {}% `", percentage.floor() as u64);
 
     ctx.send(poise::CreateReply::default()
         .embed(CreateEmbed::default()
             .title(format!("{}'s Level Info", nuser.name))
-            .description(format!("**Level:** {}\n**Experience:** {}/{}\n{}", level, experience, experience_needed, progressbar))
+            .description(format!("**Level:** {}\n**Experience:** {}/{}\n{} {}", level, experience, experience_needed, progressbar, percentage_text))
             .color(Color::from_rgb(255, 255, 255))
         )
     ).await?;
