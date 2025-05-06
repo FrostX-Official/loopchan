@@ -14,7 +14,7 @@ chrono = "0.4.40"
 dotenv = "0.15.0"
 image = "0.25.6"
 imageproc = "0.25.0"
-lastfm-rust = "0.1.0"
+lastfm-rust = { git = "https://github.com/FrostX-Official/lastfm-rust-logless.git" }
 log = "0.4.27"
 once_cell = "1.21.3"
 poise = "0.6.1"

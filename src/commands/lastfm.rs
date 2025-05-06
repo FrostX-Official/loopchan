@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use serenity::all::{ButtonStyle, Color, CreateActionRow, CreateButton, CreateEmbed};
-use tracing::error;
+use tracing::{error, warn};
 use crate::{Context, Error};
 
 use lastfm_rust::Lastfm;
@@ -70,7 +70,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
                 CreateButton::new(format!("lastfm.authorized.{}.{}", ctx.author().id.get(), token))
                     .label("Done")
                     .style(ButtonStyle::Secondary),
-                CreateButton::new("lastfm.cancel_login")
+                CreateButton::new("lastfm.cancel_auth")
                     .label("Cancel")
                     .style(ButtonStyle::Secondary)
         ])])
@@ -115,19 +115,33 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
     }
     
     let interaction: serenity::model::prelude::ComponentInteraction = interaction_not_timed_out.unwrap();
-    if interaction.data.custom_id == "lastfm.cancel_login" {
+    if interaction.data.custom_id == "lastfm.cancel_auth" {
         reply
             .edit(
                 ctx,
                 poise::CreateReply::default()
-                    .content("Cancelled login."),
+                    .content("Cancelled authorization."),
             )
             .await?;
         return Ok(());
     }
 
-    // TODO: Store user's session token in db
-    // lastfm.auth().get_session().token(&token).send().await?;
+    let get_session_result = lastfm.auth().get_session().token(&token).send().await;
+    if get_session_result.is_err() {
+        error!("Failed to claim user's ({}) session key: {}", ctx.author().id.get(), get_session_result.unwrap_err().to_string()); 
+        reply
+            .edit(
+                ctx,
+                poise::CreateReply::default()
+                    .content("Failed to claim your session key. Please try again later, if the issue persists contact <@908779319084589067>"),
+            )
+            .await?;
+        return Ok(());
+    }
+
+    let session_data = &get_session_result.unwrap()["session"];
+    // TODO: Store user's session key in db
+    warn!("{}'s last.fm session key: {} / username: {}", ctx.author().name, session_data["key"], session_data["name"]);
 
     Ok(())
 }
