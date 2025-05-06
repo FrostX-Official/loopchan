@@ -11,7 +11,7 @@ use roboat;
 
 use ::serenity::prelude::TypeMapKey;
 
-use utils::db::{create_db, prepare_users_db, prepare_eco_db, create_user_in_users_db, create_user_in_eco_db, create_lastfm_db};
+use utils::database::{create_db, linking::prepare_users_db, economy::prepare_eco_db, lastfm::prepare_lastfm_db, linking::create_user_in_users_db, economy::create_user_in_eco_db};
 
 use tokio::sync::Mutex;
 use std::collections::HashMap;
@@ -27,7 +27,6 @@ pub struct LoopchanConfig {
     owner: u64,
     global_cooldown: u64,
     database_path: Option<String>,
-    lastfm_sessions_path: Option<String>,
     welcomecard: WelcomecardConfig,
     roles: LoopchansRoles,
     channels: LoopchansChannels,
@@ -115,7 +114,6 @@ struct Data {
     roblox_client: roboat::Client, // Used for interactions with Roblox API
     lastfm_client: Lastfm, // Used for interactions with Last.fm API
     db_client: async_sqlite::Client, // Used for interactions with Loopchan's Database
-    lastfm_db_client: async_sqlite::Client, // Used for interactions with Loopchan's Last.fm Sessions Database
     exp_cooldowns: Mutex<HashMap<u64, Instant>>, // Used to cooldown economics exp add
     config: LoopchanConfig,
     log_file: String
@@ -461,9 +459,7 @@ async fn main() {
     let sqlite_client: async_sqlite::Client = create_db(loopchans_config.database_path).await.expect("Failed connecting to users database");
     prepare_users_db(&sqlite_client).await;
     prepare_eco_db(&sqlite_client).await;
-
-    // Loopchan's Last.fm Database
-    let lastfm_db_client: async_sqlite::Client = create_lastfm_db(loopchans_config.lastfm_sessions_path).await.expect("Failed connecting to Last.fm sessions database");
+    prepare_lastfm_db(&sqlite_client).await;
 
     // Loopchan's Poise Framework
     let framework = poise::Framework::builder()
@@ -575,7 +571,6 @@ async fn main() {
                         .api_secret(std::env::var("LASM_FM_API_SECRET").expect("Missing LASM_FM_API_SECRET in your environment."))
                         .build()?,
                     db_client: sqlite_client,
-                    lastfm_db_client,
                     exp_cooldowns: Mutex::new(HashMap::new()),
                     config: loopchans_config,
                     log_file

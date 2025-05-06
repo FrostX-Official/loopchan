@@ -1,9 +1,18 @@
-use crate::{utils::{basic::generate_emoji_progressbar, db::{build_balance_leaderboard_from_eco_db, build_level_leaderboard_from_eco_db, get_user_placement_in_balance_leaderboard, get_user_placement_in_level_leaderboard}}, Context, Error};
+use crate::{utils::basic::generate_emoji_progressbar, Context, Error};
 
 use serenity::all::{Color, CreateEmbed};
 use tracing::{error, info, warn};
 
-use crate::utils::db::{create_user_in_eco_db, get_user_balance_in_eco_db, get_user_level_and_experience_in_eco_db, update_user_level_and_experience_in_eco_db};
+use crate::utils::database::economy::{
+    create_user_in_eco_db,
+    get_user_balance_in_eco_db,
+    get_user_level_and_experience_in_eco_db,
+    update_user_level_and_experience_in_eco_db,
+    build_balance_leaderboard_from_eco_db,
+    build_level_leaderboard_from_eco_db,
+    get_user_placement_in_balance_leaderboard,
+    get_user_placement_in_level_leaderboard
+};
 
 fn exp_needed_to_next_level(current_level: u64) -> u64 {
     let level: f64 = current_level as f64;

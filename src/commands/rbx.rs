@@ -3,7 +3,7 @@ use std::time::Duration;
 use roboat::{thumbnails::{ThumbnailSize, ThumbnailType}, users::UsernameUserDetails};
 use serenity::all::{ButtonStyle, Colour, CreateActionRow, CreateButton, CreateEmbed, CreateInteractionResponseFollowup, RoleId};
 
-use crate::{utils::db::{get_roblox_id_in_users_db_by_discord_id, update_roblox_id_in_users_db}, Context, Data, Error};
+use crate::{utils::database::linking::{get_roblox_id_in_users_db_by_discord_id, update_roblox_id_in_users_db}, Context, Data, Error};
 
 fn remove_whitespace(s: &str) -> String {
     s.chars().filter(|c: &char| !c.is_whitespace()).collect()
