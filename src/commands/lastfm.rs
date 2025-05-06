@@ -1,15 +1,16 @@
+use std::any::Any;
 use std::time::Duration;
 
 use serenity::all::{ButtonStyle, Color, CreateActionRow, CreateButton, CreateEmbed};
 use tracing::{error, warn};
-use crate::utils::database::lastfm::{get_lastfm_session_key, save_lastfm_session_key};
+use crate::utils::database::lastfm::{save_lastfm_session_data, get_lastfm_session_data};
 use crate::{Context, Error};
 
 use lastfm_rust::Lastfm;
 use lastfm_rust::APIResponse;
 
 /// Last.fm API Commands
-#[poise::command(slash_command, subcommands("authorize"), subcommand_required)]
+#[poise::command(slash_command, subcommands("authorize", "currentlyplaying"), subcommand_required)]
 pub async fn lastfm(_ctx: Context<'_>) -> Result<(), Error> { Ok(()) }
 
 // Last.fm Token Generator
@@ -36,22 +37,30 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
     let author: &serenity::model::prelude::User = ctx.author();
     let custom_data: &crate::Data = ctx.data();
 
-    let get_session_key: Result<Option<String>, async_sqlite::Error> = get_lastfm_session_key(&custom_data.db_client, author.id.get()).await;
-    if get_session_key.is_err() {
-        error!("Failed to get user's ({}) Last.fm session key: {}", author.id.get(), get_session_key.unwrap_err().to_string());
-        ctx.send(poise::CreateReply::default()
-            .embed(
-                CreateEmbed::default()
-                    .description("Failed to check if you already authorized! Please try again later, if the issue persists contact <@908779319084589067>")
-                    .color(Color::from_rgb(255, 100, 100))
-            )
-            .ephemeral(true)
-        ).await?;
-        return Ok(());
+    let dont_check_session: bool;
+
+    let get_session_data: Result<(String, String), async_sqlite::Error> = get_lastfm_session_data(&custom_data.db_client, author.id.get()).await;
+    if get_session_data.is_err() {
+        let err_unwrapped = get_session_data.unwrap_err();
+        if err_unwrapped.type_id() == async_sqlite::Error::Rusqlite(async_sqlite::rusqlite::Error::QueryReturnedNoRows).type_id() {
+            dont_check_session = true;
+        } else {
+            error!("Failed to get user's ({}) Last.fm session data: {}", author.id.get(), err_unwrapped.to_string());
+            ctx.send(poise::CreateReply::default()
+                .embed(
+                    CreateEmbed::default()
+                        .description("Failed to check if you already authorized! Please try again later, if the issue persists contact <@908779319084589067>")
+                        .color(Color::from_rgb(255, 100, 100))
+                )
+                .ephemeral(true)
+            ).await?;
+            return Ok(());
+        }
+    } else {
+        dont_check_session = false;
     }
 
-    let session_key_exists: Option<String> = get_session_key.unwrap();
-    if session_key_exists.is_some() {
+    if !dont_check_session {
         let reply: poise::ReplyHandle<'_> = ctx.send(poise::CreateReply::default()
             .embed(
                 CreateEmbed::default()
@@ -223,8 +232,9 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
 
     let session_data = &get_session_result.unwrap()["session"];
     let session_key = &session_data["key"];
-    warn!("{}'s last.fm session key: {} / username: {}", author.name, session_key, session_data["name"]);
-    let successful_save: Result<usize, async_sqlite::Error> = save_lastfm_session_key(&custom_data.db_client, author.id.get(), session_key.to_string()).await;
+    let session_username = &session_data["name"];
+    warn!("{}'s last.fm session key: {} / username: {}", author.name, session_key, session_username);
+    let successful_save: Result<usize, async_sqlite::Error> = save_lastfm_session_data(&custom_data.db_client, author.id.get(), session_key.to_string().replace("\"", ""), session_username.to_string().replace("\"", "")).await;
 
     if successful_save.is_err() {
         error!("Failed to save user's ({}) session key: {}", author.id.get(), successful_save.unwrap_err().to_string()); 
@@ -242,6 +252,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
         .edit(
             ctx,
             poise::CreateReply::default()
+                .content("")
                 .embed(
                     CreateEmbed::default()
                         .description("Successfully authorized!")
@@ -249,6 +260,72 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
                 )
         )
         .await?;
+
+    Ok(())
+}
+
+/// Get your currently playing track.
+#[poise::command(slash_command)]
+pub async fn currentlyplaying(ctx: Context<'_>) -> Result<(), Error> {
+    let custom_data: &crate::Data = ctx.data();
+    let db_client = &custom_data.db_client;
+    let author = ctx.author();
+
+    let get_session_data: Result<(String, String), async_sqlite::Error> = get_lastfm_session_data(db_client, author.id.get()).await;
+    if get_session_data.is_err() {
+        error!("Failed to get {}'s session: {}", author.name, get_session_data.unwrap_err().to_string());
+        ctx.send(poise::CreateReply::default()
+            .embed(
+                CreateEmbed::default()
+                    .description("Failed to get your session. Are you sure you've authorized before?\nTry again later or regenerate key with `/lastfm authorize`")
+                    .color(Color::from_rgb(255, 100, 100))
+            )
+            .ephemeral(true)
+        ).await?;
+
+        return Ok(());
+    }
+
+    let (_session_key, session_username) = get_session_data.unwrap();
+
+    let lastfm: &Lastfm = &custom_data.lastfm_client;
+
+    let get_recents = lastfm.user().get_recent_tracks().limit(1).username(&session_username).send().await;
+
+    if get_recents.is_err() {
+        error!("Failed to get {}'s last.fm playing track: {}", author.id.get(), get_recents.unwrap_err().to_string());
+        ctx.send(poise::CreateReply::default()
+            .embed(
+                CreateEmbed::default()
+                    .description("Failed to get your playing track. Please try again later, if the issue persists contact <@908779319084589067>")
+                    .color(Color::from_rgb(255, 100, 100))
+            )
+            .ephemeral(true)
+        ).await?;
+
+        return Ok(());
+    }
+
+    let recents_response = get_recents.unwrap();//["recenttracks"]
+    let recents;
+
+    match recents_response {
+        APIResponse::Success(real_recents) => {
+            recents = real_recents;
+        },
+        APIResponse::Error(_) => { return Ok(()); }, // TODO: I am not sure if it can return error, but if it can do that add handle to that later
+    }
+
+    // TODO: Improve embed, check if recenttracks.track len is more than 0 (last played exists and check for "nowplaying" in @attr)
+    let last_track = &recents["recenttracks"]["track"][0]["name"];
+    ctx.send(poise::CreateReply::default()
+        .embed(
+            CreateEmbed::default()
+                .description(last_track.to_string())
+                .color(Color::from_rgb(255, 255, 255))
+        )
+        .ephemeral(true)
+    ).await?;
 
     Ok(())
 }
