@@ -232,7 +232,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
     let session_key = &session_data["key"];
     let session_username = &session_data["name"];
     warn!("{}'s last.fm session key: {} / username: {}", author.name, session_key, session_username);
-    let successful_save: Result<usize, async_sqlite::Error> = save_lastfm_session_data(&custom_data.db_client, author.id.get(), session_key.to_string().replace("\"", ""), session_username.to_string().replace("\"", "")).await;
+    let successful_save: Result<usize, async_sqlite::Error> = save_lastfm_session_data(&custom_data.db_client, author.id.get(), session_key.as_str().unwrap().to_owned(), session_username.as_str().unwrap().to_owned()).await;
 
     if successful_save.is_err() {
         error!("Failed to save user's ({}) session key: {}", author.id.get(), successful_save.unwrap_err().to_string()); 
@@ -319,7 +319,7 @@ pub async fn currentlyplaying(ctx: Context<'_>) -> Result<(), Error> {
     ctx.send(poise::CreateReply::default()
         .embed(
             CreateEmbed::default()
-                .description(last_track.to_string())
+                .description(last_track.as_str().unwrap())
                 .color(Color::from_rgb(255, 255, 255))
         )
         .ephemeral(true)
