@@ -314,15 +314,23 @@ pub async fn currentlyplaying(ctx: Context<'_>) -> Result<(), Error> {
         APIResponse::Error(_) => { return Ok(()); }, // TODO: I am not sure if it can return error, but if it can do that add handle to that later
     }
 
-    // TODO: Improve embed, check if recenttracks.track len is more than 0 (last played exists and check for "nowplaying" in @attr)
-    let last_track = &recents["recenttracks"]["track"][0]["name"];
+    // TODO: Check if recenttracks.track len is more than 0 (last played exists and check for "nowplaying" in @attr)
+
+    let last_track = &recents["recenttracks"]["track"][0];
+    let last_track_thumbnail = last_track["image"][3]["#text"].as_str().unwrap();
+    let last_track_artist = last_track["artist"]["#text"].as_str().unwrap();
+    let last_track_name = last_track["name"].as_str().unwrap();
+    let last_track_url = last_track["url"].as_str().unwrap();
+
     ctx.send(poise::CreateReply::default()
         .embed(
             CreateEmbed::default()
-                .description(last_track.as_str().unwrap())
+                .thumbnail(last_track_thumbnail)
+                .title(format!("{} — {}", last_track_artist, last_track_name))
+                .url(last_track_url)
+                .description("very cool track")
                 .color(Color::from_rgb(255, 255, 255))
         )
-        .ephemeral(true)
     ).await?;
 
     Ok(())
