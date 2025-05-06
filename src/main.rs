@@ -6,11 +6,12 @@ use poise::CreateReply;
 use poise::FrameworkError;
 use poise::serenity_prelude as serenity;
 
+use lastfm_rust::Lastfm;
 use roboat;
 
 use ::serenity::prelude::TypeMapKey;
 
-use utils::db::{create_db, prepare_users_db, prepare_eco_db, create_user_in_users_db, create_user_in_eco_db};
+use utils::db::{create_db, prepare_users_db, prepare_eco_db, create_user_in_users_db, create_user_in_eco_db, create_lastfm_db};
 
 use tokio::sync::Mutex;
 use std::collections::HashMap;
@@ -26,6 +27,7 @@ pub struct LoopchanConfig {
     owner: u64,
     global_cooldown: u64,
     database_path: Option<String>,
+    lastfm_sessions_path: Option<String>,
     welcomecard: WelcomecardConfig,
     roles: LoopchansRoles,
     channels: LoopchansChannels,
@@ -111,7 +113,9 @@ mod utils;
 #[allow(dead_code)]
 struct Data {
     roblox_client: roboat::Client, // Used for interactions with Roblox API
+    lastfm_client: Lastfm, // Used for interactions with Last.fm API
     db_client: async_sqlite::Client, // Used for interactions with Loopchan's Database
+    lastfm_db_client: async_sqlite::Client, // Used for interactions with Loopchan's Last.fm Sessions Database
     exp_cooldowns: Mutex<HashMap<u64, Instant>>, // Used to cooldown economics exp add
     config: LoopchanConfig,
     log_file: String
@@ -458,6 +462,9 @@ async fn main() {
     prepare_users_db(&sqlite_client).await;
     prepare_eco_db(&sqlite_client).await;
 
+    // Loopchan's Last.fm Database
+    let lastfm_db_client: async_sqlite::Client = create_lastfm_db(loopchans_config.lastfm_sessions_path).await.expect("Failed connecting to Last.fm sessions database");
+
     // Loopchan's Poise Framework
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
@@ -467,6 +474,7 @@ async fn main() {
                 commands::rbx::verify(),
                 commands::qa::qa(),
                 commands::eco::eco(),
+                commands::lastfm::lastfm(),
             ],
             command_check: Some(|ctx| {
                 Box::pin(async move {
@@ -562,7 +570,12 @@ async fn main() {
                 // Create global data for commands and hooks
                 Ok(Data {
                     roblox_client: roboat::ClientBuilder::new().build(),
+                    lastfm_client: Lastfm::builder()
+                        .api_key(std::env::var("LAST_FM_API_KEY").expect("Missing LAST_FM_API_KEY in your environment."))
+                        .api_secret(std::env::var("LASM_FM_API_SECRET").expect("Missing LASM_FM_API_SECRET in your environment."))
+                        .build()?,
                     db_client: sqlite_client,
+                    lastfm_db_client,
                     exp_cooldowns: Mutex::new(HashMap::new()),
                     config: loopchans_config,
                     log_file
@@ -572,7 +585,7 @@ async fn main() {
         .build();
 
     // Loopchan Start
-    let token: String = std::env::var("LOOPCHAN_DISCORD_TOKEN").expect("missing LOOPCHAN_DISCORD_TOKEN");
+    let token: String = std::env::var("LOOPCHAN_DISCORD_TOKEN").expect("Missing LOOPCHAN_DISCORD_TOKEN in your environment.");
     let mut client: serenity::Client = serenity::ClientBuilder::new(token, serenity::GatewayIntents::all())
         .framework(framework)
         .await

@@ -1,6 +1,7 @@
 use tracing::warn;
 
 const DEFAULT_DATABASE_PATH: &'static str = "loopchan.db";
+const DEFAULT_LASTFM_DATABASE_PATH: &'static str = "loopchan_lastfm.db";
 
 pub async fn create_db(path: Option<String>) -> Result<async_sqlite::Client, async_sqlite::Error> {
     if path.is_some() {
@@ -12,6 +13,20 @@ pub async fn create_db(path: Option<String>) -> Result<async_sqlite::Client, asy
 
     async_sqlite::ClientBuilder::new()
         .path(DEFAULT_DATABASE_PATH)
+        .open()
+        .await
+}
+
+pub async fn create_lastfm_db(path: Option<String>) -> Result<async_sqlite::Client, async_sqlite::Error> {
+    if path.is_some() {
+        return async_sqlite::ClientBuilder::new()
+            .path(path.unwrap())
+            .open()
+            .await;
+    }
+
+    async_sqlite::ClientBuilder::new()
+        .path(DEFAULT_LASTFM_DATABASE_PATH)
         .open()
         .await
 }

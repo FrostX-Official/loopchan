@@ -69,7 +69,7 @@ pub async fn welcomecard(
                 // Make pixels outside of circle radius (128) completely transparent :P
                 for x in 0..=255 {
                     for y in 0..=255 {
-                        if f64::hypot((x as f64) - 128.0, (y as f64) - 128.0) > 128.5 {
+                        if f64::hypot((x as f64) - 128.0, (y as f64) - 128.0) > 129.0 {
                             pfp_image.put_pixel(x, y, Rgba([0, 0, 0, 1]));
                             pfp_image.put_pixel(y, x, Rgba([0, 0, 0, 1]));
                         }

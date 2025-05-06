@@ -6,6 +6,7 @@ owner = 908779319084589067 # Loopchan's Owner ID
 global_cooldown = 2 # Cooldown for all commands (may be 0 to disable)
 
 database_path = "loopchan.db" # Optional # Main Database Path (where users, economics tables are going to be stored in)
+lastfm_sessions_path = "loopchan_lastfm.db" # Optional # Last.fm Sessions Database Path (where user's Last.fm tokens are going to be stored in)
 
 [roles]
 qa = 1334803304403963965 # QA Role ID

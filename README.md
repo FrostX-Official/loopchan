@@ -6,7 +6,7 @@ People are saying that it's hard to write bad code in Rust, this project proves 
 LOOPCHAN_DISCORD_TOKEN=String
 QA_FORM_LINK=String
 LAST_FM_API_KEY=String
-LASM_FM_SHARED_SECRET=String
+LASM_FM_API_SECRET=String
 ```
 
 ## Config ->
@@ -20,7 +20,7 @@ Look into [Config.toml](/Config.toml) for description of config variables.
   * [x] Leaderboards
   * [ ] Custom Role Shop
   * [ ] More admin commands (like customizing balance)
-  * [ ] [last.fm stats commands](https://www.last.fm/api/scrobbling)
+  * [ ] [Last.fm authorization & stats commands](https://crates.io/crates/lastfm-rust)
 
 * Giveaways
 * New Design
