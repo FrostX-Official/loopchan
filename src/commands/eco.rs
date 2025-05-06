@@ -277,7 +277,7 @@ pub async fn level(
     ctx.send(poise::CreateReply::default()
         .embed(CreateEmbed::default()
             .title(format!("{}'s Level Info", nuser.name))
-            .description(format!("**Level:** {}\n**Experience:** {}/{}\n{} {}", level, experience, experience_needed, progressbar, percentage_text))
+            .description(format!("**Level:** {}\n**Experience:** {}/{}{} {}", level, experience, experience_needed, progressbar, percentage_text))
             .color(Color::from_rgb(255, 255, 255))
         )
     ).await?;
@@ -319,7 +319,7 @@ pub async fn leaderboard(
             let custom_data = &ctx.data();
             let progressbar: String = generate_emoji_progressbar(*experience, experience_needed, custom_data.config.leveling.progress_bar_in_leaderboard_size, &custom_data.config.progressbar_emojis);
 
-            response.push_str(&format!("{} **{}.** <@{}> •\n<:LoopchanLevel:1368298876842279072> Level: {}\n<:LoopchanExp:1368298874803982479> Experience: {}/{}\n{}\n\n", placement_emoji, index + 1, discord_id, level, experience, experience_needed, progressbar));
+            response.push_str(&format!("{} **{}.** <@{}> •\n<:LoopchanLevel:1368298876842279072> Level: {}\n<:LoopchanExp:1368298874803982479> Experience: {}/{}{}\n\n", placement_emoji, index + 1, discord_id, level, experience, experience_needed, progressbar));
         }
 
         response.push_str("-# Leaderboard is limited to 5 places.");

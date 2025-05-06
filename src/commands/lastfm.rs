@@ -173,8 +173,6 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
         return Ok(());
     }
 
-    // TODO: Move lastfm interaction handling to events handlers
-
     let reply: poise::ReplyHandle<'_> = auth_reply.unwrap();
     let interaction_not_timed_out = reply
         .message()
