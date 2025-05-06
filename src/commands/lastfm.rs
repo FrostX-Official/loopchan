@@ -242,7 +242,6 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
         .edit(
             ctx,
             poise::CreateReply::default()
-                .content("Failed to save your session key. Please try again later, if the issue persists contact <@908779319084589067>")
                 .embed(
                     CreateEmbed::default()
                         .description("Successfully authorized!")
