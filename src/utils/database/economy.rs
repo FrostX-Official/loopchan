@@ -1,4 +1,4 @@
-use tracing::warn;
+use tracing::error;
 
 pub async fn prepare_eco_db(db_client: &async_sqlite::Client) {
     db_client.conn(|conn: &async_sqlite::rusqlite::Connection| {
@@ -146,7 +146,7 @@ pub async fn update_user_level_and_experience_in_eco_db(
     }
 
     if experience.is_none() {
-        warn!("Both level and experience weren't provided to `update_user_level_and_experience_in_eco_db`!");
+        error!("Both level and experience weren't provided to `update_user_level_and_experience_in_eco_db`!");
         return Ok(0);
     }
 

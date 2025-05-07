@@ -2,7 +2,7 @@ use std::any::Any;
 use std::time::Duration;
 
 use serenity::all::{ButtonStyle, Color, CreateActionRow, CreateButton, CreateEmbed, CreateEmbedFooter};
-use tracing::{error, warn};
+use tracing::{error, info};
 use crate::utils::database::lastfm::{save_lastfm_session_data, get_lastfm_session_data};
 use crate::{Context, Error};
 
@@ -231,7 +231,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
     let session_data = &get_session_result.unwrap()["session"];
     let session_key = &session_data["key"];
     let session_username = &session_data["name"];
-    warn!("{}'s last.fm session key: {} / username: {}", author.name, session_key, session_username);
+    info!("{}'s last.fm session key: {} / username: {}", author.name, session_key, session_username);
     let successful_save: Result<usize, async_sqlite::Error> = save_lastfm_session_data(&custom_data.db_client, author.id.get(), session_key.as_str().unwrap().to_owned(), session_username.as_str().unwrap().to_owned()).await;
 
     if successful_save.is_err() {
@@ -253,7 +253,10 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
         APIResponse::Success(real_userinfo) => {
             userinfo = Some(real_userinfo);
         },
-        APIResponse::Error(_) => { userinfo = None; }, // TODO: I am not sure if it can return error, but if it can do that add handle to that later
+        APIResponse::Error(apierror) => {
+            error!("Failed to fetch data about last.fm's account {}: {}", session_username, apierror.message);
+            userinfo = None;
+        }
     }
 
     if userinfo.is_some() {
@@ -325,21 +328,8 @@ pub async fn currentlyplaying(ctx: Context<'_>) -> Result<(), Error> {
 
     let lastfm: &Lastfm = &custom_data.lastfm_client;
 
+    // Although returns Result cannot return Err.
     let get_recents = lastfm.user().get_recent_tracks().limit(10).username(&session_username).send().await;
-
-    if get_recents.is_err() {
-        error!("Failed to get {}'s last.fm playing track: {}", author.id.get(), get_recents.unwrap_err().to_string());
-        ctx.send(poise::CreateReply::default()
-            .embed(
-                CreateEmbed::default()
-                    .description("Failed to get your playing track. Please try again later, if the issue persists contact <@908779319084589067>")
-                    .color(Color::from_rgb(255, 100, 100))
-            )
-            .ephemeral(true)
-        ).await?;
-
-        return Ok(());
-    }
 
     let recents_response = get_recents.unwrap();//["recenttracks"]
     let recents;
@@ -348,7 +338,18 @@ pub async fn currentlyplaying(ctx: Context<'_>) -> Result<(), Error> {
         APIResponse::Success(real_recents) => {
             recents = real_recents;
         },
-        APIResponse::Error(_) => { return Ok(()); }, // TODO: I am not sure if it can return error, but if it can do that add handle to that later
+        APIResponse::Error(get_recents_error) => {
+            error!("Failed to get {}'s last.fm playing track: {}", author.id.get(), get_recents_error.message);
+            ctx.send(poise::CreateReply::default()
+                .embed(
+                    CreateEmbed::default()
+                        .description("Failed to get your playing track. Please try again later, if the issue persists contact <@908779319084589067>")
+                        .color(Color::from_rgb(255, 100, 100))
+                )
+                .ephemeral(true)
+            ).await?;
+            return Ok(());
+        },
     }
 
     let recent_tracks = recents["recenttracks"]["track"].as_array().unwrap();

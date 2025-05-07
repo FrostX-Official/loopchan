@@ -6,7 +6,7 @@ use ::serenity::all::{CreateAttachment, ChannelId, Color, CreateEmbed, CreateMes
 
 use poise::serenity_prelude as serenity;
 
-use tracing::{warn, error};
+use tracing::error;
 
 use image::{DynamicImage, Rgb, Rgba};
 use image::imageops::{overlay, resize, FilterType};
@@ -25,7 +25,7 @@ pub async fn welcomecard(
     let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(loopchans_config.guild).unwrap().channels.clone();
     let welcomes_channel = ptl_channels.get(&loopchans_config.welcomecard.channel.unwrap().into());
     if welcomes_channel.is_none() {
-        warn!("Failed to find welcomes channel to welcome member in!");
+        error!("Failed to find welcomes channel to welcome member in!");
         return Ok(());
     }
 

@@ -329,7 +329,7 @@ async fn handle_message_component(
         let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(loopchans_config.guild).unwrap().channels.clone();
         let qa_forms_channel = ptl_channels.get(&loopchans_config.channels.qa_forms.into());
         if qa_forms_channel.is_none() {
-            warn!("Failed to get QA Forms Channel while user was accepting QA invitation!");
+            error!("Failed to get QA Forms Channel while user was accepting QA invitation!");
             return Ok(());
         }
 
@@ -360,7 +360,7 @@ async fn handle_message_component(
         let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(loopchans_config.guild).unwrap().channels.clone();
         let qa_forms_channel = ptl_channels.get(&loopchans_config.channels.qa_forms.into());
         if qa_forms_channel.is_none() {
-            warn!("Failed to get QA Forms Channel while user was accepting QA invitation!");
+            error!("Failed to get QA Forms Channel while user was accepting QA invitation!");
             return Ok(());
         }
 

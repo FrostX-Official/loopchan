@@ -1,7 +1,7 @@
 use crate::{utils::basic::generate_emoji_progressbar, Context, Error};
 
 use serenity::all::{Color, CreateEmbed};
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 use crate::utils::database::economy::{
     create_user_in_eco_db,
@@ -52,26 +52,26 @@ pub async fn give_user_eco_exp(
     let userid: u64 = user.id.get();
     let successfully_created: Result<usize, async_sqlite::Error> = create_user_in_eco_db(&custom_data.db_client, userid).await; // Why can't I put ? here to ignore Result???
     if successfully_created.is_err() {
-        warn!("Failed to create user ({}) in eco db: {}", userid, successfully_created.unwrap_err().to_string());
+        error!("Failed to create user ({}) in eco db: {}", userid, successfully_created.unwrap_err().to_string());
         return;
     }
 
     let level_exp_check: Result<(Result<u64, async_sqlite::rusqlite::Error>, Result<u64, async_sqlite::rusqlite::Error>), async_sqlite::Error> = get_user_level_and_experience_in_eco_db(&custom_data.db_client, userid).await;
     
     if !level_exp_check.is_ok() {
-        warn!("Failed to check {}'s level and experience: {}", userid, level_exp_check.unwrap_err().to_string());
+        error!("Failed to check {}'s level and experience: {}", userid, level_exp_check.unwrap_err().to_string());
         return;
     }
 
     let level_and_exp_checks: (Result<u64, async_sqlite::rusqlite::Error>, Result<u64, async_sqlite::rusqlite::Error>) = level_exp_check.unwrap();
 
     if !level_and_exp_checks.0.is_ok() {
-        warn!("Failed to check {}'s level: {}", userid, level_and_exp_checks.0.unwrap_err().to_string());
+        error!("Failed to check {}'s level: {}", userid, level_and_exp_checks.0.unwrap_err().to_string());
         return;
     }
 
     if !level_and_exp_checks.1.is_ok() {
-        warn!("Failed to check {}'s experience: {}", userid, level_and_exp_checks.1.unwrap_err().to_string());
+        error!("Failed to check {}'s experience: {}", userid, level_and_exp_checks.1.unwrap_err().to_string());
         return;
     }
 
@@ -82,7 +82,7 @@ pub async fn give_user_eco_exp(
 
     let successfully_updated: Result<usize, async_sqlite::Error> = handle_user_exp_update(&custom_data.db_client, userid, level, experience).await;
     if successfully_updated.is_err() {
-        warn!("Failed to update user ({}) in eco db: {}", userid, successfully_updated.unwrap_err().to_string());
+        error!("Failed to update user ({}) in eco db: {}", userid, successfully_updated.unwrap_err().to_string());
     }
 }
 
@@ -134,7 +134,7 @@ pub async fn modify_data(
             let level_exp_check: Result<(Result<u64, async_sqlite::rusqlite::Error>, Result<u64, async_sqlite::rusqlite::Error>), async_sqlite::Error> = get_user_level_and_experience_in_eco_db(db_client, nuser_id).await;
         
             if level_exp_check.is_err() {
-                warn!("Failed to check {}'s level and experience: {}", nuser_id, level_exp_check.unwrap_err().to_string());
+                error!("Failed to check {}'s level and experience: {}", nuser_id, level_exp_check.unwrap_err().to_string());
                 ctx.send(poise::CreateReply::default()
                     .content("Failed to modify data! (check console~)")
                     .ephemeral(true)
@@ -145,7 +145,7 @@ pub async fn modify_data(
             let level_and_exp_checks: (Result<u64, async_sqlite::rusqlite::Error>, Result<u64, async_sqlite::rusqlite::Error>) = level_exp_check.unwrap();
 
             if level_and_exp_checks.0.is_err() {
-                warn!("Failed to check {}'s level: {}", nuser_id, level_and_exp_checks.0.unwrap_err().to_string());
+                error!("Failed to check {}'s level: {}", nuser_id, level_and_exp_checks.0.unwrap_err().to_string());
                 ctx.send(poise::CreateReply::default()
                     .content("Failed to modify data! (check console~)")
                     .ephemeral(true)
@@ -166,7 +166,7 @@ pub async fn modify_data(
             .content(format!("Successful\n-# usize: {}", successful.unwrap()))
         ).await?;
     } else {
-        warn!("Failed to modify data: {}", successful.err().unwrap().to_string());
+        error!("Failed to modify data: {}", successful.err().unwrap().to_string());
         ctx.send(poise::CreateReply::default()
             .content("Failed to modify data! (check console~)")
             .ephemeral(true)
@@ -196,7 +196,7 @@ pub async fn balance(
     let balance_check: Result<u64, async_sqlite::Error> = get_user_balance_in_eco_db(&custom_data.db_client, nuser_id).await;
     
     if !balance_check.is_ok() {
-        warn!("Failed to check {}'s balance: {}", nuser_id, balance_check.unwrap_err().to_string());
+        error!("Failed to check {}'s balance: {}", nuser_id, balance_check.unwrap_err().to_string());
         ctx.send(poise::CreateReply::default()
             .content("Failed to check user's balance! Please try again later or report this issue to <@908779319084589067>.")
             .ephemeral(true)
@@ -235,7 +235,7 @@ pub async fn level(
     let level_exp_check: Result<(Result<u64, async_sqlite::rusqlite::Error>, Result<u64, async_sqlite::rusqlite::Error>), async_sqlite::Error> = get_user_level_and_experience_in_eco_db(&custom_data.db_client, nuser_id).await;
     
     if !level_exp_check.is_ok() {
-        warn!("Failed to check {}'s level and experience: {}", nuser_id, level_exp_check.unwrap_err().to_string());
+        error!("Failed to check {}'s level and experience: {}", nuser_id, level_exp_check.unwrap_err().to_string());
         ctx.send(poise::CreateReply::default()
             .content("Failed to check user's level! Please try again later or report this issue to <@908779319084589067>.")
             .ephemeral(true)
@@ -247,7 +247,7 @@ pub async fn level(
     let level_and_exp_checks: (Result<u64, async_sqlite::rusqlite::Error>, Result<u64, async_sqlite::rusqlite::Error>) = level_exp_check.unwrap();
 
     if !level_and_exp_checks.0.is_ok() {
-        warn!("Failed to check {}'s level: {}", nuser_id, level_and_exp_checks.0.unwrap_err().to_string());
+        error!("Failed to check {}'s level: {}", nuser_id, level_and_exp_checks.0.unwrap_err().to_string());
         ctx.send(poise::CreateReply::default()
             .content("Failed to check user's level! Please try again later or report this issue to <@908779319084589067>.")
             .ephemeral(true)
@@ -257,7 +257,7 @@ pub async fn level(
     }
 
     if !level_and_exp_checks.1.is_ok() {
-        warn!("Failed to check {}'s experience: {}", nuser_id, level_and_exp_checks.1.unwrap_err().to_string());
+        error!("Failed to check {}'s experience: {}", nuser_id, level_and_exp_checks.1.unwrap_err().to_string());
         ctx.send(poise::CreateReply::default()
             .content("Failed to check user's level! Please try again later or report this issue to <@908779319084589067>.")
             .ephemeral(true)
