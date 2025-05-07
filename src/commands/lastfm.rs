@@ -325,7 +325,7 @@ pub async fn currentlyplaying(ctx: Context<'_>) -> Result<(), Error> {
 
     let lastfm: &Lastfm = &custom_data.lastfm_client;
 
-    let get_recents = lastfm.user().get_recent_tracks().limit(1).username(&session_username).send().await;
+    let get_recents = lastfm.user().get_recent_tracks().limit(10).username(&session_username).send().await;
 
     if get_recents.is_err() {
         error!("Failed to get {}'s last.fm playing track: {}", author.id.get(), get_recents.unwrap_err().to_string());
@@ -351,15 +351,59 @@ pub async fn currentlyplaying(ctx: Context<'_>) -> Result<(), Error> {
         APIResponse::Error(_) => { return Ok(()); }, // TODO: I am not sure if it can return error, but if it can do that add handle to that later
     }
 
-    // TODO: Check if recenttracks.track len is more than 0 (last played exists and check for "nowplaying" in @attr)
+    let recent_tracks = recents["recenttracks"]["track"].as_array().unwrap();
+    if recent_tracks.len() < 1 {
+        ctx.send(poise::CreateReply::default()
+            .embed(
+                CreateEmbed::default()
+                    .description("You don't have recent tracks on last.fm!")
+                    .color(Color::from_rgb(255, 100, 100))
+            )
+            .ephemeral(true)
+        ).await?;
+
+        return Ok(());
+    }
 
     let last_track = &recents["recenttracks"]["track"][0];
+
     let last_track_thumbnail = last_track["image"][3]["#text"].as_str().unwrap();
     let last_track_artist = last_track["artist"]["#text"].as_str().unwrap();
     let last_track_name = last_track["name"].as_str().unwrap();
     let last_track_url = last_track["url"].as_str().unwrap();
 
+    let last_track_has_attributes: bool = last_track.as_object().unwrap().contains_key("@attr");
+    if last_track_has_attributes { // holy nesting
+        let last_track_has_nowplaying_attr = last_track["@attr"].as_object().unwrap().contains_key("nowplaying");
+        if last_track_has_nowplaying_attr {
+            if last_track["@attr"]["nowplaying"].as_str().unwrap() == "true" { // for some reason they return true as string, not boolean.
+                ctx.send(poise::CreateReply::default()
+                    .embed(
+                        CreateEmbed::default()
+                            .thumbnail(last_track_thumbnail)
+                            .title(format!("{} — {}", last_track_artist, last_track_name))
+                            .url(last_track_url)
+                            .description("very cool track")
+                            .color(Color::from_rgb(255, 255, 255))
+                    )
+                    .components(vec![ // nesting hell
+                        CreateActionRow::Buttons(vec![
+                            CreateButton::new_link(last_track_url)
+                                .label("View on last.fm")
+                                .style(ButtonStyle::Secondary),
+                    ])])
+                ).await?;
+                return Ok(());
+            }
+        }
+    }
+
     ctx.send(poise::CreateReply::default()
+        .embed(
+            CreateEmbed::default()
+                .description("Could not find the track you're listening to.\nBut here's the last track you've listened to:")
+                .color(Color::from_rgb(255, 100, 100))
+        )
         .embed(
             CreateEmbed::default()
                 .thumbnail(last_track_thumbnail)
@@ -368,6 +412,12 @@ pub async fn currentlyplaying(ctx: Context<'_>) -> Result<(), Error> {
                 .description("very cool track")
                 .color(Color::from_rgb(255, 255, 255))
         )
+        .components(vec![ // nesting hell
+            CreateActionRow::Buttons(vec![
+                CreateButton::new_link(last_track_url)
+                    .label("View on last.fm")
+                    .style(ButtonStyle::Secondary),
+        ])])
     ).await?;
 
     Ok(())
