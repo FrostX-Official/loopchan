@@ -35,8 +35,8 @@ mid="<:LoopchanProgressbarFillProgress:1368315373547683980>" # Filled Progress B
 end="<:LoopchanProgressbarFillEnd:1368315371278565491>" # Filled Progress Bar End
 
 [leveling]
-max_exp_per_message=40
-exp_multiplier=1
-double_multiplier_on_weekdays=true
-progrees_bar_size=10
-progress_bar_in_leaderboard_size=8
+max_exp_per_message=40 # The max amount of exp you can get per message (excluding modifiers)
+exp_multiplier=1 # Base exp multiplier
+double_multiplier_on_weekdays=true # Whenether or not to double exp gain on weekdays (Saturday, Sunday)
+progrees_bar_size=10 # Progressbar size in `/eco level`
+progress_bar_in_leaderboard_size=8 # Progressbar size in `/eco leaderboard`
