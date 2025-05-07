@@ -1,13 +1,10 @@
 use std::time::Duration;
 
+use poise::CreateReply;
 use roboat::{thumbnails::{ThumbnailSize, ThumbnailType}, users::UsernameUserDetails};
-use serenity::all::{ButtonStyle, Colour, CreateActionRow, CreateButton, CreateEmbed, CreateInteractionResponseFollowup, RoleId};
+use serenity::all::{ButtonStyle, Colour, CreateActionRow, CreateButton, CreateEmbed};
 
-use crate::{utils::database::linking::{get_roblox_id_in_users_db_by_discord_id, update_roblox_id_in_users_db}, Context, Data, Error};
-
-fn remove_whitespace(s: &str) -> String {
-    s.chars().filter(|c: &char| !c.is_whitespace()).collect()
-}
+use crate::{utils::{basic::remove_whitespace, database::linking::get_roblox_id_in_users_db_by_discord_id}, Context, Data, Error};
 
 /// Verify your Discord account by linking it to your Roblox account
 #[poise::command(slash_command, global_cooldown=2, user_cooldown=10)]
@@ -190,7 +187,6 @@ pub async fn verify(
             .label("Regenerate")
             .style(ButtonStyle::Secondary)
             .emoji('🔃')
-            .disabled(true), // TODO: Add random words regeneration functionality later (incase the ones that were generated before are censored by Roblox)
     ]);
 
     let builder: poise::CreateReply = poise::CreateReply::default()
@@ -208,6 +204,7 @@ pub async fn verify(
     randomwords.remove(0); // For some reason if you join vector with \n separator it will not show first element in embed. This is why we're deleting it after creating embed
     let no_whitespace_wordgen = remove_whitespace(&randomwords.join("\n"));
 
+    ctx_data.verifications.lock().await.insert(author_id, (no_whitespace_wordgen, roblox_user_id));
     let reply = ctx.send(builder).await?;
 
     let interaction = reply
@@ -218,126 +215,16 @@ pub async fn verify(
         .timeout(Duration::new(300, 0))
         .await;
 
-    reply
-        .edit(
-            ctx,
-            poise::CreateReply::default()
-                .components(vec![])
-                .content("Processing... Please wait."),
-        )
-        .await?;
-    
-    let pressed_button_id = match &interaction {
-        Some(m) => &m.data.custom_id,
-        None => {
-            if interaction.is_none() {
-                return Ok(());
-            }
-            interaction.unwrap().create_followup(ctx, CreateInteractionResponseFollowup::default()
-                .embed(
-                    CreateEmbed::default()
-                        .title("⚠ You didn't interact in time!")
-                        .description(
-                            "Run the command again, if you want to verify."
-                        )
-                        .color(Colour::from_rgb(255, 255, 80))
-                )
-                .ephemeral(true)
-            ).await?;
-            return Ok(());
-        }
-    };
-
-    if pressed_button_id == "verification.cancel" {
-        // Cancel verification
+    if interaction.is_none() {
         reply
             .edit(
                 ctx,
-                poise::CreateReply::default()
-                    .content("❌ Verification Cancelled."),
+                CreateReply::default()
+                    .components(vec![])
+                    .content("Timed out.")
+                    .ephemeral(true)
             )
             .await?;
-    } else {
-        // Check if wordgens match
-        let user_details_fetch: Result<roboat::users::UserDetails, roboat::RoboatError> = roblox_client.user_details(roblox_user_id).await;
-        if !user_details_fetch.is_ok() {
-            reply
-                .edit(
-                    ctx,
-                    poise::CreateReply::default()
-                        .content("Failed to verify your account!\nPlease try again later."),
-                )
-                .await?;
-            return Ok(());
-        }
-
-        let user_details_fetch_unwrapped: roboat::users::UserDetails = user_details_fetch.unwrap();
-        let user_description: String = user_details_fetch_unwrapped.description;
-        let no_whitespace_description = remove_whitespace(&user_description);
-        
-        if no_whitespace_description != no_whitespace_wordgen {
-            reply
-                .edit(
-                    ctx,
-                    poise::CreateReply::default()
-                        .content("Your Roblox profile description does not match wordgen.\nIf you think that's not true contact <@908779319084589067> for support!\nYou can try again later."),
-                )
-                .await?;
-            return Ok(());
-        }
-
-        // Change user's roblox_id in db to new, verified one
-
-        let successfully_updated_data: Result<usize, async_sqlite::Error> = update_roblox_id_in_users_db(db_client, author_id, roblox_user_id).await;
-        if !successfully_updated_data.is_ok() {
-            eprintln!("{}", &successfully_updated_data.err().unwrap().to_string());
-            reply
-                .edit(
-                    ctx,
-                    poise::CreateReply::default()
-                        .content("Failed to verify your account!\nPlease try again later or report this issue to <@908779319084589067>!"),
-                )
-                .await?;
-            return Ok(());
-        }
-
-        // TODO: Also update roles depending on data in game
-
-        let successfully_gave_member_role: Result<(), serenity::Error> = ctx.author_member().await.unwrap().add_role(ctx, RoleId::new(ctx_data.config.roles.member)).await;
-        if !successfully_gave_member_role.is_ok() {
-            eprintln!("{}", &successfully_gave_member_role.err().unwrap().to_string());
-            reply
-                .edit(
-                    ctx,
-                    poise::CreateReply::default()
-                        .content("") // Clear text, leave only embed
-                        .embed(
-                            CreateEmbed::default()
-                                .title("Verified Account!")
-                                .description(
-                                    "Thank you for verification!\nOnce the game comes out you will be able to update your roles, depending on your data ingame :D\n-# Failed to give out member role though! Please contact <@&1334231212851466311> for that."
-                                )
-                                .color(Colour::from_rgb(80, 255, 80))
-                        )
-                )
-                .await?;
-        } else {
-            reply
-                .edit(
-                    ctx,
-                    poise::CreateReply::default()
-                        .content("") // Clear text, leave only embed
-                        .embed(
-                            CreateEmbed::default()
-                                .title("Verified Account!")
-                                .description(
-                                    "Thank you for verification!\nOnce the game comes out you will be able to update your roles, depending on your data ingame :D"
-                                )
-                                .color(Colour::from_rgb(80, 255, 80))
-                        )
-                )
-                .await?;
-        }
     }
 
     Ok(())

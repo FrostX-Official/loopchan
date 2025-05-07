@@ -1,5 +1,9 @@
 use crate::Context;
 
+pub fn remove_whitespace(s: &str) -> String {
+    s.chars().filter(|c: &char| !c.is_whitespace()).collect()
+}
+
 pub async fn _is_staff(ctx: Context<'_>, user: &serenity::model::user::User) -> bool { // Currently not useful, access to commands will be configured within server settings.
     let config = &ctx.data().config;
     if user.id == config.owner { return true; }
