@@ -1,7 +1,7 @@
 use std::any::Any;
 use std::time::Duration;
 
-use serenity::all::{ButtonStyle, Color, CreateActionRow, CreateButton, CreateEmbed};
+use serenity::all::{ButtonStyle, Color, CreateActionRow, CreateButton, CreateEmbed, CreateEmbedFooter};
 use tracing::{error, warn};
 use crate::utils::database::lastfm::{save_lastfm_session_data, get_lastfm_session_data};
 use crate::{Context, Error};
@@ -246,18 +246,55 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
         return Ok(());
     }
 
-    reply
-        .edit(
-            ctx,
-            poise::CreateReply::default()
-                .content("")
-                .embed(
-                    CreateEmbed::default()
-                        .description("Successfully authorized!")
-                        .color(Color::from_rgb(100, 255, 100))
-                )
-        )
-        .await?;
+    let userinfo_response = lastfm.user().get_info().user(session_username.as_str().unwrap()).send().await.unwrap();
+    let userinfo: Option<serde_json::Value>;
+
+    match userinfo_response {
+        APIResponse::Success(real_userinfo) => {
+            userinfo = Some(real_userinfo);
+        },
+        APIResponse::Error(_) => { userinfo = None; }, // TODO: I am not sure if it can return error, but if it can do that add handle to that later
+    }
+
+    if userinfo.is_some() {
+        let user = &userinfo.unwrap()["user"];
+        reply
+            .edit(
+                ctx,
+                poise::CreateReply::default()
+                    .content("")
+                    .embed(
+                        CreateEmbed::default()
+                            .title("Authorized!")
+                            .thumbnail(user["image"][3]["#text"].as_str().unwrap())
+                            .description(format!("<@{}> successfully authorized as **{}**!\nCurrently you have **{}** scrobbles,\nwith **{}** of them being unique :3",
+                                author.id.get(),
+                                user["name"].as_str().unwrap(),
+                                user["playcount"].as_str().unwrap(),
+                                user["track_count"].as_str().unwrap()
+                            ))
+                            .color(Color::from_rgb(100, 255, 100))
+                    )
+                    .ephemeral(false)
+            )
+            .await?;
+    } else {
+        reply
+            .edit(
+                ctx,
+                poise::CreateReply::default()
+                    .content("")
+                    .embed(
+                        CreateEmbed::default()
+                            .title("Authorized!")
+                            .description(format!("<@{}> successfully authorized as {}!", author.id.get(), session_username))
+                            .footer(CreateEmbedFooter::new("Also failed to fetch more data about you.. T-T"))
+                            .color(Color::from_rgb(100, 255, 100))
+                    )
+                    .ephemeral(false)
+            )
+            .await?;
+    }
 
     Ok(())
 }

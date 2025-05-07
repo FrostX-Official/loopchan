@@ -22,7 +22,6 @@ pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-/// Generate random word from wordgen module
 #[poise::command(slash_command)]
 pub async fn wordgen(
     ctx: Context<'_>,
@@ -81,7 +80,6 @@ pub async fn clearlogs(
     Ok(())
 }
 
-/// Generate random word from wordgen module
 #[poise::command(slash_command)]
 pub async fn postverificationchannellink(
     ctx: Context<'_>,
@@ -111,7 +109,6 @@ pub async fn postverificationchannellink(
     Ok(())
 }
 
-/// Slash Commands Registering Handler
 #[poise::command(slash_command)]
 pub async fn register(ctx: Context<'_>) -> Result<(), Error> {
     poise::builtins::register_application_commands_buttons(ctx).await?;

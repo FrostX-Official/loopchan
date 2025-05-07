@@ -8,7 +8,6 @@ use crate::{utils::basic::is_qa, Context, Error};
 #[poise::command(slash_command, subcommands("sendform"), subcommand_required)]
 pub async fn qa(_ctx: Context<'_>) -> Result<(), Error> { Ok(()) }
 
-/// Send QA form to specific member
 #[poise::command(slash_command)]
 pub async fn sendform(
     ctx: Context<'_>,

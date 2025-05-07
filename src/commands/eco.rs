@@ -90,7 +90,6 @@ pub async fn give_user_eco_exp(
 #[poise::command(slash_command, subcommands("balance", "level", "modify_data", "leaderboard"), subcommand_required)]
 pub async fn eco(_ctx: Context<'_>) -> Result<(), Error> { Ok(()) }
 
-/// Modify user's level and/or experience.
 #[poise::command(slash_command)]
 pub async fn modify_data(
     ctx: Context<'_>,
