@@ -71,15 +71,16 @@ pub async fn handle_interaction(
             let last_regeneration_time = cooldowns.entry(interaction.user.id.get()).or_insert((Instant::now() - cooldown_duration).into());
             if last_regeneration_time.elapsed() < cooldown_duration {
                 // Recreate previous response
+                let prev_embed = &interaction.message.embeds[0];
                 interaction.edit_response(
                     ctx,
                     EditInteractionResponse::default()
                         .content("")
                         .embed(
-                            CreateEmbed::default() // TODO: Rewrite this wtf
-                                .title(interaction.message.embeds[0].title.clone().unwrap())
-                                .description(interaction.message.embeds[0].description.clone().unwrap())
-                                .color(interaction.message.embeds[0].colour.unwrap())
+                            CreateEmbed::default()
+                                .title(prev_embed.title.as_ref().unwrap())
+                                .description(prev_embed.description.as_ref().unwrap())
+                                .color(prev_embed.colour.unwrap())
                         )
                         .components(vec![components])
                 )
