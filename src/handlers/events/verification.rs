@@ -1,4 +1,7 @@
-use serenity::all::{ButtonStyle, Colour, ComponentInteraction, CreateActionRow, CreateButton, CreateEmbed, CreateInteractionResponse, CreateInteractionResponseMessage, EditInteractionResponse, Guild, RoleId};
+use tokio::time::Instant;
+use std::time::Duration;
+
+use serenity::all::{ButtonStyle, Colour, ComponentInteraction, CreateActionRow, CreateButton, CreateEmbed, CreateInteractionResponse, CreateInteractionResponseFollowup, CreateInteractionResponseMessage, EditInteractionResponse, Guild, RoleId};
 
 use crate::utils::{basic::remove_whitespace, database::linking::update_roblox_id_in_users_db};
 
@@ -22,7 +25,7 @@ pub async fn handle_interaction(
         no_whitespace_wordgen = wordgen.clone(); // hpfully not expensive
         roblox_user_id = id.clone();
     }
-
+    
     interaction.create_response(
         ctx,
         CreateInteractionResponse::UpdateMessage(
@@ -60,8 +63,43 @@ pub async fn handle_interaction(
                 .label("Regenerate")
                 .style(ButtonStyle::Secondary)
                 .emoji('🔃')
-                .disabled(true) // TODO: Maybe make regeneration always enabled, but add cooldown to it .. ?
         ]);
+            
+        {
+            let cooldown_duration: Duration = Duration::from_secs(10);
+            let mut cooldowns = data.regenerations_cooldowns.lock().await;
+            let last_regeneration_time = cooldowns.entry(interaction.user.id.get()).or_insert((Instant::now() - cooldown_duration).into());
+            if last_regeneration_time.elapsed() < cooldown_duration {
+                // Recreate previous response
+                interaction.edit_response(
+                    ctx,
+                    EditInteractionResponse::default()
+                        .content("")
+                        .embed(
+                            CreateEmbed::default() // TODO: Rewrite this wtf
+                                .title(interaction.message.embeds[0].title.clone().unwrap())
+                                .description(interaction.message.embeds[0].description.clone().unwrap())
+                                .color(interaction.message.embeds[0].colour.unwrap())
+                        )
+                        .components(vec![components])
+                )
+                .await.unwrap();
+
+                let remaining = cooldown_duration-last_regeneration_time.elapsed();
+                let remaining_precise: f64 = (remaining.as_millis() as f64)/1000.0;
+                let error_msg = format!("You're too fast!~ Please wait `{}` seconds before retrying!!", remaining_precise);
+
+                interaction.create_followup(ctx, 
+                    CreateInteractionResponseFollowup::default()
+                        .content(error_msg)
+                        .ephemeral(true)
+                ).await.unwrap();
+
+                return;
+            } else {
+                *last_regeneration_time = Instant::now().into();
+            }
+        }
 
         let mut randomwords: Vec<String> = vec![];
         for _ in 0..11 {
@@ -85,10 +123,28 @@ pub async fn handle_interaction(
 
         data.verifications.lock().await.insert(interaction.user.id.get(), (no_whitespace_wordgen, roblox_user_id));
 
-        interaction.edit_response(
+        let new_response = interaction.edit_response(
             ctx,
             builder)
         .await.unwrap();
+
+        let new_interaction = new_response
+            .await_component_interaction(ctx)
+            .author_id(interaction.user.id)
+            .timeout(Duration::new(300, 0))
+            .await;
+
+        if new_interaction.is_none() {
+            interaction
+                .edit_response(
+                    ctx,
+                    EditInteractionResponse::default()
+                        .components(vec![])
+                        .embeds(vec![])
+                        .content("Timed out.")
+                )
+                .await.unwrap();
+        }
 
         return;
     }

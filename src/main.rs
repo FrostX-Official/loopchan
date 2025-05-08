@@ -115,7 +115,8 @@ struct Data {
     lastfm_client: Lastfm, // Used for interactions with Last.fm API
     db_client: async_sqlite::Client, // Used for interactions with Loopchan's Database
     exp_cooldowns: Mutex<HashMap<u64, Instant>>, // Used to cooldown economics exp add
-    verifications: Mutex<HashMap<u64, (String, u64)>>, // Used to transfer data (wordgen and roblox_id) from `/rbx verify`` to `verification::handle_interaction(...)``
+    regenerations_cooldowns: Mutex<HashMap<u64, Instant>>, // Used to cooldown wordgen regeneration in `/rbx verify`
+    verifications: Mutex<HashMap<u64, (String, u64)>>, // Used to transfer data (wordgen and roblox_id) from `/rbx verify` to `verification::handle_interaction(...)``
     config: LoopchanConfig, // Used to read and index Config.toml
     log_file: String // Session .log file path
 }
@@ -575,6 +576,7 @@ async fn main() {
                         .build()?,
                     db_client: sqlite_client,
                     exp_cooldowns: Mutex::new(HashMap::new()),
+                    regenerations_cooldowns: Mutex::new(HashMap::new()),
                     verifications: Mutex::new(HashMap::new()),
                     config: loopchans_config,
                     log_file
