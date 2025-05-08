@@ -42,8 +42,7 @@ pub async fn handle_interaction(
             ctx,
             EditInteractionResponse::default()
                 .content("❌ Verification Cancelled.")
-        )
-        .await.unwrap();
+        ).await.unwrap();
 
         return;
     }
@@ -83,14 +82,14 @@ pub async fn handle_interaction(
                                 .color(prev_embed.colour.unwrap())
                         )
                         .components(vec![components])
-                )
-                .await.unwrap();
+                ).await.unwrap();
 
                 let remaining = cooldown_duration-last_regeneration_time.elapsed();
                 let remaining_precise: f64 = (remaining.as_millis() as f64)/1000.0;
                 let error_msg = format!("You're too fast!~ Please wait `{}` seconds before retrying!!", remaining_precise);
 
-                interaction.create_followup(ctx, 
+                interaction.create_followup(
+                    ctx,
                     CreateInteractionResponseFollowup::default()
                         .content(error_msg)
                         .ephemeral(true)
@@ -126,8 +125,8 @@ pub async fn handle_interaction(
 
         let new_response = interaction.edit_response(
             ctx,
-            builder)
-        .await.unwrap();
+            builder
+        ).await.unwrap();
 
         let new_interaction = new_response
             .await_component_interaction(ctx)
@@ -136,15 +135,13 @@ pub async fn handle_interaction(
             .await;
 
         if new_interaction.is_none() {
-            interaction
-                .edit_response(
-                    ctx,
-                    EditInteractionResponse::default()
-                        .components(vec![])
-                        .embeds(vec![])
-                        .content("Timed out.")
-                )
-                .await.unwrap();
+            interaction.edit_response(
+                ctx,
+                EditInteractionResponse::default()
+                    .components(vec![])
+                    .embeds(vec![])
+                    .content("Timed out.")
+            ).await.unwrap();
         }
 
         return;
@@ -210,19 +207,20 @@ pub async fn handle_interaction(
                 )
         )
         .await.unwrap();
-    } else {
-        interaction.edit_response(
-            ctx,
-            EditInteractionResponse::default()
-                .content("") // Clear text, leave only embed
-                .embed(
-                    CreateEmbed::default()
-                        .title("Verified Account!")
-                        .description(
-                            "Thank you for verification!\nOnce the game comes out you will be able to update your roles, depending on your data ingame :D"
-                        )
-                        .color(Colour::from_rgb(80, 255, 80))
-                )
-        ).await.unwrap();
+        return;
     }
+
+    interaction.edit_response(
+        ctx,
+        EditInteractionResponse::default()
+            .content("") // Clear text, leave only embed
+            .embed(
+                CreateEmbed::default()
+                    .title("Verified Account!")
+                    .description(
+                        "Thank you for verification!\nOnce the game comes out you will be able to update your roles, depending on your data ingame :D"
+                    )
+                    .color(Colour::from_rgb(80, 255, 80))
+            )
+    ).await.unwrap();
 }
