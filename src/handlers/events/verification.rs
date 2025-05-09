@@ -177,7 +177,7 @@ pub async fn handle_interaction(
 
     let successfully_updated_data: Result<usize, async_sqlite::Error> = update_roblox_id_in_users_db(&data.db_client, interaction.user.id.get(), roblox_user_id).await;
     if !successfully_updated_data.is_ok() {
-        eprintln!("{}", &successfully_updated_data.err().unwrap().to_string());
+        error!("{}", &successfully_updated_data.err().unwrap().to_string());
         interaction.edit_response(
                 ctx,
                 EditInteractionResponse::default()
@@ -192,7 +192,7 @@ pub async fn handle_interaction(
     let member = Guild::get(ctx, data.config.guild).await.unwrap().member(ctx, interaction.user.id).await.unwrap();
     let successfully_gave_member_role: Result<(), serenity::Error> = member.add_role(ctx, RoleId::new(data.config.roles.member)).await;
     if !successfully_gave_member_role.is_ok() {
-        eprintln!("{}", &successfully_gave_member_role.err().unwrap().to_string());
+        error!("{}", &successfully_gave_member_role.err().unwrap().to_string());
         interaction.edit_response(
             ctx,
             EditInteractionResponse::default()

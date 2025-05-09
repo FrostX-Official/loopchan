@@ -137,7 +137,7 @@ static PTL_PAID_TESTING_PRESENCE: Lazy<serenity::ActivityData> = Lazy::new(|| se
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     match error {
         crate::FrameworkError::Setup { error, .. } => {
-            eprintln!("Error in user data setup: {}", error);
+            error!("Error in user data setup: {}", error);
         }
         crate::FrameworkError::EventHandler { error, event, .. } => error!(
             "User event event handler encountered an error on {} event: {}",
@@ -146,7 +146,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
         ),
         crate::FrameworkError::Command { ctx, error , .. } => {
             let error = error.to_string();
-            eprintln!("An error occured in a command: {}", error);
+            error!("An error occured in a command: {}", error);
 
             let mentions = CreateAllowedMentions::new()
                 .everyone(false)
