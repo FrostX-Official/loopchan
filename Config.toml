@@ -8,35 +8,45 @@ global_cooldown = 2 # Cooldown for all commands (may be 0 to disable)
 database_path = "loopchan.db" # Optional # Main Database Path (where users, economics, lastfm sessions tables are going to be stored in)
 
 [roles]
-qa = 1334803304403963965 # QA Role ID
-staff = 1334231212851466311 # Staff Role ID
-member = 1360707888900997332 # Member Role ID
+qa = 1334803304403963965        # QA Role ID
+staff = 1334231212851466311     # Staff Role ID
+member = 1360707888900997332    # Member Role ID
 
 [channels]
-qa_forms=1366382858649731103 # QA Forms Channel ID
-unverified_chat=1364308262517997568 # Unverified Chat Channel ID
+qa_forms = 1366382858649731103          # QA Forms Channel ID
+unverified_chat = 1364308262517997568   # Unverified Chat Channel ID
 
 [welcomecard]
-enabled=true # Should send welcomecard once user joins server?
-channel=1368184484645572718 # Where to send welcomecard
-react=true # Should add reaction to welcomecard message?
-react_id=1367090774453522502 # Reaction ID
-react_name="wave" # Reaction Name
-react_animated=true # Is reaction animated?
+enabled         = true                  # Should send welcomecard once user joins server?
+channel         = 1368184484645572718   # Where to send welcomecard
+react           = true                  # Should add reaction to welcomecard message?
+react_id        = 1367090774453522502   # Reaction ID
+react_name      = "wave"                # Reaction Name
+react_animated  = true                  # Is reaction animated?
 
 [progressbar_emojis] # Custom progress bar with emojis until ComponentsV2 support in serenity comes out # Please note that bot must be in the same server with emojis for it to work
 [progressbar_emojis.empty] # Empty Progress Bar
-start="<:LoopchanProgressbarStart:1368315378404429914>" # Empty Progress Bar Start
-mid="<:LoopchanProgressbarProgress:1368315376450146426>" # Empty Progress Bar Mid (progress)
-end="<:LoopchanProgressbarEnd:1368315369722351617>" # Empty Progress Bar End
+start   = "<:LoopchanProgressbarStart:1368315378404429914>"     # Empty Progress Bar Start
+mid     = "<:LoopchanProgressbarProgress:1368315376450146426>"  # Empty Progress Bar Mid (progress)
+end     = "<:LoopchanProgressbarEnd:1368315369722351617>"       # Empty Progress Bar End
 [progressbar_emojis.filled] # Filled Progress Bar
-start="<:LoopchanProgressbarFillStart:1368315375048986817>" # Filled Progress Bar Start
-mid="<:LoopchanProgressbarFillProgress:1368315373547683980>" # Filled Progress Bar Mid (progress)
-end="<:LoopchanProgressbarFillEnd:1368315371278565491>" # Filled Progress Bar End
+start   = "<:LoopchanProgressbarFillStart:1368315375048986817>"     # Filled Progress Bar Start
+mid     = "<:LoopchanProgressbarFillProgress:1368315373547683980>"  # Filled Progress Bar Mid (progress)
+end     = "<:LoopchanProgressbarFillEnd:1368315371278565491>"       # Filled Progress Bar End
 
 [leveling]
-max_exp_per_message=40 # The max amount of exp you can get per message (excluding modifiers)
-exp_multiplier=1 # Base exp multiplier
-double_multiplier_on_weekdays=true # Whenether or not to double exp gain on weekdays (Saturday, Sunday)
-progrees_bar_size=10 # Progressbar size in `/eco level`
-progress_bar_in_leaderboard_size=8 # Progressbar size in `/eco leaderboard`
+max_exp_per_message                 = 40    # The max amount of exp you can get per message (excluding modifiers)
+exp_multiplier                      = 1     # Base exp multiplier
+double_multiplier_on_weekdays       = true  # Whenether or not to double exp gain on weekdays (Saturday, Sunday)
+progrees_bar_size                   = 10    # Progressbar size in `/eco level`
+progress_bar_in_leaderboard_size    = 8     # Progressbar size in `/eco leaderboard`
+
+[economy] # TODO: Add more phrases
+work_phrases = [
+    "You've done some deliveries, avoiding enforcers and gained {} coins.",
+    "You've done some time trials and gained {} coins by selling medals.",
+    "You've won a race against another runner and they paid you {} coins."
+]
+failed_work_phrases = [
+    "You've got caught by enforcer while running and could not complete a delivery.",
+]

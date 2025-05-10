@@ -31,7 +31,8 @@ pub struct LoopchanConfig {
     roles: LoopchansRoles,
     channels: LoopchansChannels,
     progressbar_emojis: ProgressBarEmojisTypes,
-    leveling: LevelingConfig
+    leveling: LevelingConfig,
+    economy: EconomyConfig
 }
 
 impl TypeMapKey for LoopchanConfig {
@@ -58,6 +59,12 @@ pub struct LevelingConfig {
     double_multiplier_on_weekdays: bool,
     progrees_bar_size: u64,
     progress_bar_in_leaderboard_size: u64
+}
+
+#[derive(Deserialize)]
+pub struct EconomyConfig {
+    work_phrases: toml::value::Array,
+    failed_work_phrases: toml::value::Array,
 }
 
 #[derive(Deserialize)]

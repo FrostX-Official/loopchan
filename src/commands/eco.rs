@@ -384,16 +384,29 @@ pub async fn leaderboard(
 }
 
 /// Work a parkourian job
-#[poise::command(slash_command)] // TODO: Make proper text with a random job within config toml and make proper error handling & cooldown
+#[poise::command(slash_command)] // TODO: Make this look pretty, make proper error handling & cooldown
 pub async fn work(
     ctx: Context<'_>,
 ) -> Result<(), Error> {
-    let add_to_balance: u64 = rand::rng().random_range(0..100);
+    let economy_config = &ctx.data().config.economy;
+    if rand::rng().random_bool(0.5) == false { // Failed work
+        let random_phrase = rand::rng().random_range(0..economy_config.failed_work_phrases.len());
+        ctx.send(
+            CreateReply::default()
+                .content(economy_config.failed_work_phrases[random_phrase].as_str().unwrap())
+        ).await?;
+
+        return Ok(());
+    }
+
+    let add_to_balance: u64 = rand::rng().random_range(50..100);
     increment_user_balance_in_eco_db(&ctx.data().db_client, ctx.author().id.get(), add_to_balance).await?;
 
+    let random_phrase = rand::rng().random_range(0..economy_config.work_phrases.len());
     ctx.send(
-        CreateReply::default()
-            .content(format!("well uhh yeah.\nyou get {} coins or smth", add_to_balance))
+        CreateReply::default() // idk if you can format! macro without having literal string so this may be here for a bit // TODO: uhhh do something about it
+            .content(economy_config.work_phrases[random_phrase].as_str().unwrap().replace("{}", &add_to_balance.to_string()))
     ).await?;
+
     Ok(())
 }
