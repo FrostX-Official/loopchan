@@ -1,5 +1,7 @@
-use crate::{utils::basic::generate_emoji_progressbar, Context, Error};
+use crate::{utils::{basic::generate_emoji_progressbar, database::economy::increment_user_balance_in_eco_db}, Context, Error};
 
+use poise::CreateReply;
+use rand::Rng;
 use serenity::all::{Color, CreateEmbed};
 use tracing::{error, info};
 
@@ -87,7 +89,7 @@ pub async fn give_user_eco_exp(
 }
 
 /// Economics Commands
-#[poise::command(slash_command, subcommands("balance", "level", "modify_data", "leaderboard"), subcommand_required)]
+#[poise::command(slash_command, subcommands("balance", "level", "modify_data", "leaderboard", "work"), subcommand_required)]
 pub async fn eco(_ctx: Context<'_>) -> Result<(), Error> { Ok(()) }
 
 #[poise::command(slash_command)]
@@ -98,7 +100,7 @@ pub async fn modify_data(
     #[description = "Experience"] experience: Option<u64>
 ) -> Result<(), Error> {
     if level.is_none() && experience.is_none() {
-        ctx.send(poise::CreateReply::default()
+        ctx.send(CreateReply::default()
             .content("Provide level and/or experience.")
             .ephemeral(true)
         ).await?;
@@ -117,7 +119,7 @@ pub async fn modify_data(
     let s = create_user_in_eco_db(db_client, nuser_id).await;
     if s.is_err() {
         error!("Failed to create user in db: {}", s.unwrap_err().to_string());
-        ctx.send(poise::CreateReply::default()
+        ctx.send(CreateReply::default()
             .content("Failed to create user in db! (check console~)")
             .ephemeral(true)
         ).await?;
@@ -135,7 +137,7 @@ pub async fn modify_data(
         
             if level_exp_check.is_err() {
                 error!("Failed to check {}'s level and experience: {}", nuser_id, level_exp_check.unwrap_err().to_string());
-                ctx.send(poise::CreateReply::default()
+                ctx.send(CreateReply::default()
                     .content("Failed to modify data! (check console~)")
                     .ephemeral(true)
                 ).await?;
@@ -146,7 +148,7 @@ pub async fn modify_data(
 
             if level_and_exp_checks.0.is_err() {
                 error!("Failed to check {}'s level: {}", nuser_id, level_and_exp_checks.0.unwrap_err().to_string());
-                ctx.send(poise::CreateReply::default()
+                ctx.send(CreateReply::default()
                     .content("Failed to modify data! (check console~)")
                     .ephemeral(true)
                 ).await?;
@@ -162,12 +164,12 @@ pub async fn modify_data(
     }
 
     if successful.is_ok() {
-        ctx.send(poise::CreateReply::default()
+        ctx.send(CreateReply::default()
             .content(format!("Successful\n-# usize: {}", successful.unwrap()))
         ).await?;
     } else {
         error!("Failed to modify data: {}", successful.err().unwrap().to_string());
-        ctx.send(poise::CreateReply::default()
+        ctx.send(CreateReply::default()
             .content("Failed to modify data! (check console~)")
             .ephemeral(true)
         ).await?;
@@ -197,7 +199,7 @@ pub async fn balance(
     
     if !balance_check.is_ok() {
         error!("Failed to check {}'s balance: {}", nuser_id, balance_check.unwrap_err().to_string());
-        ctx.send(poise::CreateReply::default()
+        ctx.send(CreateReply::default()
             .content("Failed to check user's balance! Please try again later or report this issue to <@908779319084589067>.")
             .ephemeral(true)
         ).await?;
@@ -207,7 +209,7 @@ pub async fn balance(
 
     let balance: u64 = balance_check.unwrap();
 
-    ctx.send(poise::CreateReply::default()
+    ctx.send(CreateReply::default()
         .content(format!("<@{}>'s Balance: {}", nuser.id, balance))
         .ephemeral(true)
     ).await?;
@@ -236,7 +238,7 @@ pub async fn level(
     
     if !level_exp_check.is_ok() {
         error!("Failed to check {}'s level and experience: {}", nuser_id, level_exp_check.unwrap_err().to_string());
-        ctx.send(poise::CreateReply::default()
+        ctx.send(CreateReply::default()
             .content("Failed to check user's level! Please try again later or report this issue to <@908779319084589067>.")
             .ephemeral(true)
         ).await?;
@@ -248,7 +250,7 @@ pub async fn level(
 
     if !level_and_exp_checks.0.is_ok() {
         error!("Failed to check {}'s level: {}", nuser_id, level_and_exp_checks.0.unwrap_err().to_string());
-        ctx.send(poise::CreateReply::default()
+        ctx.send(CreateReply::default()
             .content("Failed to check user's level! Please try again later or report this issue to <@908779319084589067>.")
             .ephemeral(true)
         ).await?;
@@ -258,7 +260,7 @@ pub async fn level(
 
     if !level_and_exp_checks.1.is_ok() {
         error!("Failed to check {}'s experience: {}", nuser_id, level_and_exp_checks.1.unwrap_err().to_string());
-        ctx.send(poise::CreateReply::default()
+        ctx.send(CreateReply::default()
             .content("Failed to check user's level! Please try again later or report this issue to <@908779319084589067>.")
             .ephemeral(true)
         ).await?;
@@ -273,7 +275,7 @@ pub async fn level(
     let percentage: f64 = experience as f64/experience_needed as f64 *100.0;
     let percentage_text: String = format!("` {}% `", percentage.floor() as u64);
 
-    ctx.send(poise::CreateReply::default()
+    ctx.send(CreateReply::default()
         .embed(CreateEmbed::default()
             .title(format!("{}'s Level Info", nuser.name))
             .description(format!("**Level:** {}\n**Experience:** {}/{}{} {}", level, experience, experience_needed, progressbar, percentage_text))
@@ -330,7 +332,7 @@ pub async fn leaderboard(
             error!("Failed to fetch {}'s placement: {}", ctx.author().name, placement.unwrap_err().to_string());
         }
         
-        ctx.send(poise::CreateReply::default()
+        ctx.send(CreateReply::default()
             .embed(CreateEmbed::default()
                 .title("<a:qtstar:1367089440073318501> Level Leaderboard")
                 .description(response)
@@ -370,7 +372,7 @@ pub async fn leaderboard(
         error!("Failed to fetch {}'s placement: {}", ctx.author().name, placement.unwrap_err().to_string());
     }
     
-    ctx.send(poise::CreateReply::default()
+    ctx.send(CreateReply::default()
         .embed(CreateEmbed::default()
             .title("<a:qtstar:1367089440073318501> Balance Leaderboard")
             .description(response)
@@ -378,5 +380,20 @@ pub async fn leaderboard(
         )
     ).await?;
 
+    Ok(())
+}
+
+/// Work a parkourian job
+#[poise::command(slash_command)] // TODO: Make proper text with a random job within config toml and make proper error handling & cooldown
+pub async fn work(
+    ctx: Context<'_>,
+) -> Result<(), Error> {
+    let add_to_balance: u64 = rand::rng().random_range(0..100);
+    increment_user_balance_in_eco_db(&ctx.data().db_client, ctx.author().id.get(), add_to_balance).await?;
+
+    ctx.send(
+        CreateReply::default()
+            .content(format!("well uhh yeah.\nyou get {} coins or smth", add_to_balance))
+    ).await?;
     Ok(())
 }
