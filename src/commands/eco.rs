@@ -384,7 +384,7 @@ pub async fn leaderboard(
 }
 
 /// Work a parkourian job
-#[poise::command(slash_command)] // TODO: Make this look pretty, make proper error handling & cooldown
+#[poise::command(slash_command)] // TODO: Make this look pretty and add configurable cooldown
 pub async fn work(
     ctx: Context<'_>,
 ) -> Result<(), Error> {
@@ -400,12 +400,13 @@ pub async fn work(
     }
 
     let add_to_balance: u64 = rand::rng().random_range(50..100);
-    increment_user_balance_in_eco_db(&ctx.data().db_client, ctx.author().id.get(), add_to_balance).await?;
+    increment_user_balance_in_eco_db(&ctx.data().db_client, ctx.author().id.get(), add_to_balance).await?; // TODO: Handle error
 
-    let random_phrase = rand::rng().random_range(0..economy_config.work_phrases.len());
+    let random_phrase_num = rand::rng().random_range(0..economy_config.work_phrases.len());
+    let random_phrase = economy_config.work_phrases[random_phrase_num].as_str().unwrap();
     ctx.send(
-        CreateReply::default() // idk if you can format! macro without having literal string so this may be here for a bit // TODO: uhhh do something about it
-            .content(economy_config.work_phrases[random_phrase].as_str().unwrap().replace("{}", &add_to_balance.to_string()))
+        CreateReply::default()
+            .content(random_phrase.replace("{}", &add_to_balance.to_string()))
     ).await?;
 
     Ok(())
