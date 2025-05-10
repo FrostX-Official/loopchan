@@ -65,6 +65,7 @@ pub struct LevelingConfig {
 pub struct EconomyConfig {
     work_phrases: toml::value::Array,
     failed_work_phrases: toml::value::Array,
+    work_fail_chance: f32
 }
 
 #[derive(Deserialize)]

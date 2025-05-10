@@ -389,7 +389,7 @@ pub async fn work(
     ctx: Context<'_>,
 ) -> Result<(), Error> {
     let economy_config = &ctx.data().config.economy;
-    if rand::rng().random_bool(0.5) == false { // Failed work
+    if rand::rng().random_bool((1.0-economy_config.work_fail_chance).into()) == false { // Failed work
         let random_phrase = rand::rng().random_range(0..economy_config.failed_work_phrases.len());
         ctx.send(
             CreateReply::default()
