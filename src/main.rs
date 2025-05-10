@@ -487,12 +487,11 @@ async fn main() {
             ],
             command_check: Some(|ctx| {
                 Box::pin(async move {
-                    // Ion know another way of doing it properly (maybe match would be better?) (does it even work?)
-                    if ctx.command().qualified_name == "eco work" {
-                        return Ok(true);
-                    }
-                    if ctx.command().qualified_name == "verify" {
-                        return Ok(true);
+                    // Ion know how to make it look better :pray:
+                    match &ctx.command().qualified_name {
+                        val if val == &"eco work".to_owned() => return Ok(true),
+                        val if val == &"verify".to_owned() => return Ok(true),
+                        _ => {}
                     }
 
                     let loopchans_config = &ctx.data().config;
@@ -548,16 +547,23 @@ async fn main() {
                 })
             },
             post_command: |ctx| {
-                let author = ctx.author();
-                let cc: poise::CooldownContext = poise::CooldownContext {
-                    user_id: author.id,
-                    channel_id: ctx.channel_id(),
-                    guild_id: ctx.guild_id()
-                };
-                let mut cooldown_tracker = ctx.command().cooldowns.lock().unwrap();
-                cooldown_tracker.start_cooldown(cc);
-
                 Box::pin(async move {
+                    // Ion know how to make it look better :pray:
+                    match &ctx.command().qualified_name {
+                        val if val == &"eco work".to_owned() => return,
+                        val if val == &"verify".to_owned() => return,
+                        _ => {}
+                    }
+
+                    let author = ctx.author();
+                    let cc: poise::CooldownContext = poise::CooldownContext {
+                        user_id: author.id,
+                        channel_id: ctx.channel_id(),
+                        guild_id: ctx.guild_id()
+                    };
+                    let mut cooldown_tracker = ctx.command().cooldowns.lock().unwrap();
+                    cooldown_tracker.start_cooldown(cc);
+
                     info!("@{} ({}) executed command: \"{}\"", author.name, author.id, ctx.command().name);
                 })
             },

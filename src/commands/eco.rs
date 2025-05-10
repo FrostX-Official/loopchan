@@ -416,7 +416,7 @@ pub async fn work(
                 CreateReply::default()
                     .embed(
                         CreateEmbed::default()
-                            .description(format!("You're currently too exhausted to work! Wait `{}` minutes.", on_cooldown/60))
+                            .description(format!("You're currently too exhausted to work! Wait `{}` minutes.\n-# {} seconds", on_cooldown/60, on_cooldown))
                             .color(Color::from_rgb(255, 100, 100))
                     )
                     .ephemeral(true)
