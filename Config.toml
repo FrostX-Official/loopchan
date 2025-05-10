@@ -43,11 +43,12 @@ progress_bar_in_leaderboard_size    = 8     # Progressbar size in `/eco leaderbo
 
 [economy] # TODO: Add more phrases
 work_phrases = [
-    "You've done some deliveries, avoiding enforcers, and gained {} coins.",
-    "You've done some time trials and gained {} coins by selling medals.",
-    "You've won a race against another runner, and they paid you {} coins."
+    "You've done some deliveries, avoiding enforcers, and gained **{} coins**.",
+    "You've done some time trials and gained **{} coins** by selling medals.",
+    "You've won a race against another runner, and they paid you **{} coins**."
 ]
 failed_work_phrases = [
-    "You got caught by an enforcer while running and could not complete a delivery.",
+    "You got caught by an enforcer while running and **could not complete a delivery**.",
 ]
-work_fail_chance = 0.1 # 10%
+work_fail_chance = 0.1  # Work has a chance to fail, user will not receive any amount of coins if that happens (10%)
+work_cooldown = 2      # In minutes

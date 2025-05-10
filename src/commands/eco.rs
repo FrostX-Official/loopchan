@@ -1,6 +1,8 @@
+use std::time::Duration;
+
 use crate::{utils::{basic::generate_emoji_progressbar, database::economy::increment_user_balance_in_eco_db}, Context, Error};
 
-use poise::CreateReply;
+use poise::{CooldownConfig, CreateReply};
 use rand::Rng;
 use serenity::all::{Color, CreateEmbed};
 use tracing::{error, info};
@@ -384,16 +386,67 @@ pub async fn leaderboard(
 }
 
 /// Work a parkourian job
-#[poise::command(slash_command)] // TODO: Make this look pretty and add configurable cooldown
+#[poise::command(slash_command)] // TODO: Make this look pretty
 pub async fn work(
     ctx: Context<'_>,
 ) -> Result<(), Error> {
     let economy_config = &ctx.data().config.economy;
+    let on_cooldown: i32;
+
+    {
+        let mut cooldown_tracker = ctx.command().cooldowns.lock().unwrap();
+
+        let mut cooldown_durations: CooldownConfig = CooldownConfig::default();
+        cooldown_durations.user = Some(Duration::from_secs(economy_config.work_cooldown*60));
+
+        match cooldown_tracker.remaining_cooldown(ctx.cooldown_context(), &cooldown_durations) {
+            Some(remaining) => {
+                on_cooldown = remaining.as_secs() as i32;
+            }
+            None => {
+                cooldown_tracker.start_cooldown(ctx.cooldown_context());
+                on_cooldown = -1;
+            },
+        }
+    };
+
+    if on_cooldown != -1 {
+        if on_cooldown > 60 {
+            ctx.send(
+                CreateReply::default()
+                    .embed(
+                        CreateEmbed::default()
+                            .description(format!("You're currently too exhausted to work! Wait `{}` minutes.", on_cooldown/60))
+                            .color(Color::from_rgb(255, 100, 100))
+                    )
+                    .ephemeral(true)
+            ).await?;
+
+            return Ok(());
+        }
+
+        ctx.send(
+            CreateReply::default()
+                .embed(
+                    CreateEmbed::default()
+                        .description(format!("You're currently too exhausted to work! Wait `{}` seconds.", on_cooldown))
+                        .color(Color::from_rgb(255, 100, 100))
+                )
+                .ephemeral(true)
+        ).await?;
+
+        return Ok(());
+    }
+    
     if rand::rng().random_bool((1.0-economy_config.work_fail_chance).into()) == false { // Failed work
         let random_phrase = rand::rng().random_range(0..economy_config.failed_work_phrases.len());
         ctx.send(
             CreateReply::default()
-                .content(economy_config.failed_work_phrases[random_phrase].as_str().unwrap())
+                .embed(
+                    CreateEmbed::default()
+                        .description(economy_config.failed_work_phrases[random_phrase].as_str().unwrap())
+                        .color(Color::from_rgb(255, 100, 100))
+                )
         ).await?;
 
         return Ok(());
@@ -406,7 +459,11 @@ pub async fn work(
     let random_phrase = economy_config.work_phrases[random_phrase_num].as_str().unwrap();
     ctx.send(
         CreateReply::default()
-            .content(random_phrase.replace("{}", &add_to_balance.to_string()))
+            .embed(
+                CreateEmbed::default()
+                    .description(random_phrase.replace("{}", &add_to_balance.to_string()))
+                    .color(Color::from_rgb(100, 255, 100))
+            )
     ).await?;
 
     Ok(())

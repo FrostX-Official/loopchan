@@ -65,7 +65,8 @@ pub struct LevelingConfig {
 pub struct EconomyConfig {
     work_phrases: toml::value::Array,
     failed_work_phrases: toml::value::Array,
-    work_fail_chance: f32
+    work_fail_chance: f32,
+    work_cooldown: u64
 }
 
 #[derive(Deserialize)]
@@ -486,6 +487,14 @@ async fn main() {
             ],
             command_check: Some(|ctx| {
                 Box::pin(async move {
+                    // Ion know another way of doing it properly (maybe match would be better?) (does it even work?)
+                    if ctx.command().qualified_name == "eco work" {
+                        return Ok(true);
+                    }
+                    if ctx.command().qualified_name == "verify" {
+                        return Ok(true);
+                    }
+
                     let loopchans_config = &ctx.data().config;
                     let mut cooldown_durations = poise::CooldownConfig::default();
                     cooldown_durations.user = Some(std::time::Duration::from_secs(loopchans_config.global_cooldown));
@@ -552,7 +561,7 @@ async fn main() {
                     info!("@{} ({}) executed command: \"{}\"", author.name, author.id, ctx.command().name);
                 })
             },
-            //manual_cooldowns: true,
+            manual_cooldowns: true,
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
