@@ -18,7 +18,7 @@ Look into [Config.toml](/Config.toml) for description of config variables.
   * [x] Exp for chatting
   * [x] Level System
   * [x] Leaderboards
-  * [ ] Work for coins commands *(with cooldown like 30 minutes)*
+  * [x] Work for coins commands *(with cooldown like 30 minutes)*
   * [ ] Custom Role Shop
   * [ ] More admin commands (like customizing balance)
 * Last.fm
