@@ -66,7 +66,8 @@ pub struct EconomyConfig {
     work_phrases: toml::value::Array,
     failed_work_phrases: toml::value::Array,
     work_fail_chance: f32,
-    work_cooldown: u64
+    work_cooldown: u64,
+    work_payment: toml::value::Array
 }
 
 #[derive(Deserialize)]

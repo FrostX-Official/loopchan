@@ -452,7 +452,7 @@ pub async fn work(
         return Ok(());
     }
 
-    let add_to_balance: u64 = rand::rng().random_range(50..100);
+    let add_to_balance: u64 = rand::rng().random_range(economy_config.work_payment[0].as_integer().unwrap()..economy_config.work_payment[1].as_integer().unwrap()).try_into().unwrap();
     increment_user_balance_in_eco_db(&ctx.data().db_client, ctx.author().id.get(), add_to_balance).await?; // TODO: Handle error
 
     let random_phrase_num = rand::rng().random_range(0..economy_config.work_phrases.len());

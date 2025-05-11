@@ -55,4 +55,5 @@ failed_work_phrases = [
     "A patrol of **enforcers caught you while you were delivering** a package.",
 ]
 work_fail_chance    = 0.1  # Work has a chance to fail, user will not receive any amount of coins if that happens (10%)
-work_cooldown       = 30   # In minutes
+work_cooldown       = 20   # In minutes
+work_payment = [100, 200]  # A range of how much you get for /eco work (randomized)
