@@ -1,9 +1,9 @@
-title = "Loopchan's Config File"
+### Loopchan's Config File
 
 guild = 1334179500384059456 # PTL Guild ID
-owner = 908779319084589067 # Loopchan's Owner ID
+owner = 908779319084589067  # Loopchan's Owner ID
 
-global_cooldown = 2 # Cooldown for all commands (may be 0 to disable)
+global_cooldown = 3 # Cooldown for all commands (may be 0 to disable)
 
 database_path = "loopchan.db" # Optional # Main Database Path (where users, economics, lastfm sessions tables are going to be stored in)
 
