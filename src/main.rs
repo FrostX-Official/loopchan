@@ -497,7 +497,11 @@ async fn main() {
 
                     let loopchans_config = &ctx.data().config;
                     let mut cooldown_durations = poise::CooldownConfig::default();
-                    cooldown_durations.user = Some(std::time::Duration::from_secs(loopchans_config.global_cooldown));
+                    if loopchans_config.global_cooldown == 0 {
+                        cooldown_durations.user = None;
+                    } else {
+                        cooldown_durations.user = Some(std::time::Duration::from_secs(loopchans_config.global_cooldown));
+                    }
 
                     let cc: poise::CooldownContext = poise::CooldownContext {
                         user_id: ctx.author().id,
