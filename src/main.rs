@@ -549,6 +549,9 @@ async fn main() {
             },
             post_command: |ctx| {
                 Box::pin(async move {
+                    let author = ctx.author();
+                    info!("@{} ({}) executed command: \"{}\"", author.name, author.id, ctx.command().name);
+
                     // Ion know how to make it look better :pray:
                     match &ctx.command().qualified_name {
                         val if val == &"eco work".to_owned() => return,
@@ -556,7 +559,6 @@ async fn main() {
                         _ => {}
                     }
 
-                    let author = ctx.author();
                     let cc: poise::CooldownContext = poise::CooldownContext {
                         user_id: author.id,
                         channel_id: ctx.channel_id(),
@@ -564,8 +566,6 @@ async fn main() {
                     };
                     let mut cooldown_tracker = ctx.command().cooldowns.lock().unwrap();
                     cooldown_tracker.start_cooldown(cc);
-
-                    info!("@{} ({}) executed command: \"{}\"", author.name, author.id, ctx.command().name);
                 })
             },
             manual_cooldowns: true,
