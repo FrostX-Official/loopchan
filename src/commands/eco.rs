@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::{utils::{basic::generate_emoji_progressbar, database::economy::increment_user_balance_in_eco_db}, Context, Error};
+use crate::{utils::{basic::generate_emoji_progressbar, database::economy::increment_user_balance_in_eco_db}, Context, Error, RoleShopItem};
 
 use poise::{CooldownConfig, CreateReply};
 use rand::Rng;
@@ -390,20 +390,28 @@ pub async fn leaderboard(
 pub async fn roleshop(
     ctx: Context<'_>
 ) -> Result<(), Error> {
-    let loopchans_config = &ctx.data().config;
-    let shop_items = &loopchans_config.economy.shop_items;
+    let loopchans_config: &crate::LoopchanConfig = &ctx.data().config;
+    let shop_items: &Vec<toml::Value> = &loopchans_config.economy.shop_items;
 
-    let mut response = String::new();
+    let mut response: String = String::new();
     let mut item_index: u8 = 0;
     for item in shop_items {
         item_index += 1;
         let item_unwrapped: &toml::map::Map<String, toml::Value> = item.as_table().unwrap();
+        let item_prepared: RoleShopItem = RoleShopItem { // I hate this, what the actual fuck is this?? .unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap()
+            id: item_unwrapped.get("id").unwrap().as_integer().unwrap() as u64,
+            icon: item_unwrapped.get("icon").unwrap().as_str().unwrap().to_string(),
+            display_name: item_unwrapped.get("display_name").unwrap().as_str().unwrap().to_string(),
+            description: item_unwrapped.get("description").unwrap().as_str().unwrap().to_string(),
+            price: item_unwrapped.get("price").unwrap().as_integer().unwrap() as u32,
+        }; // TODO: Make roles buyable and give user role with item_prepared ID
+
         response.push_str(&format!("{} **{}.** {} • *${}*\n*{}*\n\n",
-            item_unwrapped.get("icon").unwrap().as_str().unwrap(),
+            item_prepared.icon,
             item_index,
-            item_unwrapped.get("display_name").unwrap().as_str().unwrap(),
-            item_unwrapped.get("price").unwrap().as_integer().unwrap(),
-            item_unwrapped.get("description").unwrap().as_str().unwrap(),
+            item_prepared.display_name,
+            item_prepared.price,
+            item_prepared.description,
         ));
     }
 

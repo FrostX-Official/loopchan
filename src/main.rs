@@ -63,7 +63,7 @@ pub struct LevelingConfig {
 
 #[derive(Deserialize)]
 pub struct RoleShopItem {
-    id: u64,
+    id: u64, // TODO: Make roles buyable and give user role with this ID
     display_name: String,
     icon: String,
     description: String,
