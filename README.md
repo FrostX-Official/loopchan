@@ -21,6 +21,7 @@ Look into [Config.toml](/Config.toml) for description of config variables.
   * [x] Work for coins commands *(with cooldown like 30 minutes)*
   * [ ] Custom Role Shop
   * [ ] More admin commands (like customizing balance)
+  * [ ] Fishing & Fish Inventory & Fish transactions between players (😍)
 * Last.fm
   * [x] Authorization
   * [ ] Get info about tracks, albums & artists commands
