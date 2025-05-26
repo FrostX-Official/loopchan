@@ -91,7 +91,7 @@ pub async fn give_user_eco_exp(
 }
 
 /// Economics Commands
-#[poise::command(slash_command, subcommands("balance", "level", "modify_data", "leaderboard", "work"), subcommand_required)]
+#[poise::command(slash_command, subcommands("balance", "level", "modify_data", "leaderboard", "roleshop", "work"), subcommand_required)]
 pub async fn eco(_ctx: Context<'_>) -> Result<(), Error> { Ok(()) }
 
 #[poise::command(slash_command)]
@@ -378,6 +378,38 @@ pub async fn leaderboard(
         .embed(CreateEmbed::default()
             .title("<a:qtstar:1367089440073318501> Balance Leaderboard")
             .description(response)
+            .color(Color::from_rgb(255, 255, 255))
+        )
+    ).await?;
+
+    Ok(())
+}
+
+/// A role shop
+#[poise::command(slash_command, aliases("rs"))]
+pub async fn roleshop(
+    ctx: Context<'_>
+) -> Result<(), Error> {
+    let loopchans_config = &ctx.data().config;
+    let shop_items = &loopchans_config.economy.shop_items;
+
+    let mut response = String::new();
+    let mut item_index: u8 = 0;
+    for item in shop_items {
+        item_index += 1;
+        let item_unwrapped: &toml::map::Map<String, toml::Value> = item.as_table().unwrap();
+        response.push_str(&format!("{} **{}.** {} • *${}*\n*{}*\n\n",
+            item_unwrapped.get("icon").unwrap().as_str().unwrap(),
+            item_index,
+            item_unwrapped.get("display_name").unwrap().as_str().unwrap(),
+            item_unwrapped.get("price").unwrap().as_integer().unwrap(),
+            item_unwrapped.get("description").unwrap().as_str().unwrap(),
+        ));
+    }
+
+    ctx.send(CreateReply::default()
+        .embed(CreateEmbed::default()
+            .description(format!("# indev\n{}", response))
             .color(Color::from_rgb(255, 255, 255))
         )
     ).await?;

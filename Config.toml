@@ -57,3 +57,9 @@ failed_work_phrases = [
 work_fail_chance    = 0.1  # Work has a chance to fail, user will not receive any amount of coins if that happens (10%)
 work_cooldown       = 20   # In minutes
 work_payment = [100, 200]  # A range of how much you get for /eco work (randomized)
+shop_items = [
+    { id = 1376626127375962155, icon = "<:LoopchanTraceur:1376642201647583356>", display_name = "Traceur", description = "An experienced runner", price = 500 },
+    { id = 1376625906893848637, icon = "<:LoopchanElysium:1376642240566263818>", display_name = "Elysium Employee", description = "An elysium employee that is allied with runners", price = 1499 },
+    { id = 1376627136001085531, icon = "<:LoopchanEnforcer:1376642267430781078>", display_name = "Enforcer", description = "An enforcer that protects city from crime & runners", price = 6942 },
+    { id = 1376627238774247475, icon = "<:LoopchanPoslar:1376642282597646436>", display_name = "Poslar", description = "evil.", price = 10000 },
+]
