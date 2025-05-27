@@ -1,4 +1,8 @@
+use std::io::Error;
+
 use tracing::error;
+
+use crate::RoleShopItem;
 
 pub async fn prepare_eco_db(db_client: &async_sqlite::Client) {
     db_client.conn(|conn: &async_sqlite::rusqlite::Connection| {
@@ -183,4 +187,31 @@ pub async fn increment_user_balance_in_eco_db(
             (discord_id, increment)
         )
     }).await;
+}
+
+pub async fn get_roleshopitem_by_id(
+    id: u64, shop_items: toml::value::Array
+) -> Result<RoleShopItem, Error> {
+    let mut shop_item: Option<RoleShopItem> = None;
+    for item in shop_items {
+        let item_unwrapped: &toml::map::Map<String, toml::Value> = item.as_table().unwrap();
+        let item_prepared: RoleShopItem = RoleShopItem { // I hate this, what the actual fuck is this?? .unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap() 🤖
+            id: item_unwrapped.get("id").unwrap().as_integer().unwrap() as u64,
+            icon_id: item_unwrapped.get("icon_id").unwrap().as_integer().unwrap() as u64,
+            icon_name: item_unwrapped.get("icon_name").unwrap().as_str().unwrap().to_string(),
+            display_name: item_unwrapped.get("display_name").unwrap().as_str().unwrap().to_string(),
+            description: item_unwrapped.get("description").unwrap().as_str().unwrap().to_string(),
+            price: item_unwrapped.get("price").unwrap().as_integer().unwrap() as u32,
+        };
+
+        if item_prepared.id == id {
+            shop_item = Some(item_prepared);
+        }
+    }
+    
+    if shop_item.is_some() {
+        return Ok(shop_item.unwrap());
+    }
+
+    return Err(Error::new(std::io::ErrorKind::Other, format!("Not found RoleShopItem by provided ID: {}", id)));
 }

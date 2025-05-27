@@ -1,19 +1,13 @@
-// TODO: Add roleshop.buy.{id} handler
-
 use serenity::all::{ButtonStyle, Color, ComponentInteraction, CreateActionRow, CreateButton, CreateEmbed, CreateInteractionResponse, CreateInteractionResponseMessage};
 use tracing::{error, warn};
 
-use crate::{utils::database::economy::get_user_balance_in_eco_db, RoleShopItem};
+use crate::{utils::database::economy::{get_roleshopitem_by_id, get_user_balance_in_eco_db}, RoleShopItem};
 
-pub async fn handle_interaction(
+pub async fn handle_roleshop_selector(
     ctx: &serenity::prelude::Context,
     interaction: ComponentInteraction,
     data: &crate::Data
 ) {
-    let interaction_id = &interaction.data.custom_id;
-    if interaction_id != "roleshop.selector" {
-        return;
-    }
     let selector_option_id: Option<&Vec<std::string::String>> = match &interaction.data.kind {
         serenity::all::ComponentInteractionDataKind::StringSelect { values } => { Some(values) }
         _ => { None }
@@ -28,24 +22,9 @@ pub async fn handle_interaction(
     let pressed_button_role_id: u64 = pressed_button_role_id_str.parse().unwrap();
 
     let shop_items: &Vec<toml::Value> = &data.config.economy.shop_items;
-    let mut shop_item: Option<RoleShopItem> = None;
-    for item in shop_items {
-        let item_unwrapped: &toml::map::Map<String, toml::Value> = item.as_table().unwrap();
-        let item_prepared: RoleShopItem = RoleShopItem { // I hate this, what the actual fuck is this?? .unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap() 🤖
-            id: item_unwrapped.get("id").unwrap().as_integer().unwrap() as u64,
-            icon_id: item_unwrapped.get("icon_id").unwrap().as_integer().unwrap() as u64,
-            icon_name: item_unwrapped.get("icon_name").unwrap().as_str().unwrap().to_string(),
-            display_name: item_unwrapped.get("display_name").unwrap().as_str().unwrap().to_string(),
-            description: item_unwrapped.get("description").unwrap().as_str().unwrap().to_string(),
-            price: item_unwrapped.get("price").unwrap().as_integer().unwrap() as u32,
-        };
+    let shop_item: Result<RoleShopItem, std::io::Error> = get_roleshopitem_by_id(pressed_button_role_id, shop_items.to_vec()).await;
 
-        if item_prepared.id == pressed_button_role_id {
-            shop_item = Some(item_prepared);
-        }
-    }
-
-    if shop_item.is_none() {
+    if shop_item.is_err() {
         warn!("Not found shop item with ID: {}", selector_option_id);
         return;
     }
@@ -99,4 +78,99 @@ pub async fn handle_interaction(
                 .ephemeral(true)
         )
     ).await.unwrap();
+}
+
+pub async fn handle_roleshop_buy(
+    ctx: &serenity::prelude::Context,
+    interaction: ComponentInteraction,
+    data: &crate::Data
+) {
+    let role_id_str: String = interaction.data.custom_id.clone().split_off(13);
+    let role_id: u64 = role_id_str.parse().unwrap();
+
+    let shop_items: &Vec<toml::Value> = &data.config.economy.shop_items;
+    let shop_item: Result<RoleShopItem, std::io::Error> = get_roleshopitem_by_id(role_id, shop_items.to_vec()).await;
+
+    if shop_item.is_err() {
+        warn!("Not found shop item with ID: {}", role_id);
+        return;
+    }
+    let shop_item: RoleShopItem = shop_item.unwrap();
+
+    let db_client = &data.db_client;
+    let author_id: u64 = interaction.user.id.get();
+
+    let balance_check: Result<u64, async_sqlite::Error> = get_user_balance_in_eco_db(db_client, author_id).await;
+    if !balance_check.is_ok() {
+        interaction.create_response(
+            ctx,
+            CreateInteractionResponse::UpdateMessage(
+                CreateInteractionResponseMessage::default()
+                    .embed(
+                        CreateEmbed::default()
+                            .description("Failed to check your balance. Please try again later.")
+                            .color(Color::from_rgb(255, 100, 100))
+                    )
+                    .components(vec![])
+                    .ephemeral(true)
+            )
+        ).await.unwrap();
+        return;
+    }
+
+    let balance: u64 = balance_check.unwrap();
+
+    if shop_item.price as u64 > balance {
+        let components = vec![
+            CreateActionRow::Buttons(vec![
+                CreateButton::new(format!("roleshop.buy.{}", shop_item.id))
+                    .label("Retry")
+                    .style(ButtonStyle::Danger),
+        ])];
+
+        interaction.create_response(
+            ctx,
+            CreateInteractionResponse::UpdateMessage(
+                CreateInteractionResponseMessage::default()
+                    .embed(
+                        CreateEmbed::default()
+                            .description("you're broke") // TODO: Change (lol)
+                            .color(Color::from_rgb(255, 100, 100))
+                    )
+                    .components(components)
+                    .ephemeral(true)
+            )
+        ).await.unwrap();
+        return;
+    }
+
+    // TODO: Finish role buying
+
+    interaction.create_response(
+        ctx,
+        CreateInteractionResponse::UpdateMessage(
+            CreateInteractionResponseMessage::default()
+                .embed(
+                    CreateEmbed::default()
+                        .description("wip")
+                        .color(Color::from_rgb(255, 255, 255))
+                )
+                .components(vec![])
+                .ephemeral(true)
+        )
+    ).await.unwrap();
+}
+
+pub async fn handle_interaction(
+    ctx: &serenity::prelude::Context,
+    interaction: ComponentInteraction,
+    data: &crate::Data
+) {
+    let interaction_id = &interaction.data.custom_id;
+    if interaction_id == "roleshop.selector" {
+        return handle_roleshop_selector(ctx, interaction, data).await;
+    }
+    if interaction_id.starts_with("roleshop.buy.") {
+        return handle_roleshop_buy(ctx, interaction, data).await;
+    }
 }
