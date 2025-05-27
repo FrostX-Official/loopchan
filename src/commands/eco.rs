@@ -4,7 +4,7 @@ use crate::{utils::{basic::generate_emoji_progressbar, database::economy::increm
 
 use poise::{CooldownConfig, CreateReply};
 use rand::Rng;
-use serenity::all::{Color, CreateActionRow, CreateEmbed, CreateSelectMenu, CreateSelectMenuKind, CreateSelectMenuOption, ReactionType};
+use serenity::all::{Color, CreateActionRow, CreateButton, CreateEmbed, CreateSelectMenu, CreateSelectMenuKind, CreateSelectMenuOption, ReactionType};
 use tracing::{error, info};
 
 use crate::utils::database::economy::{
@@ -400,14 +400,14 @@ pub async fn roleshop(
     for item in shop_items {
         item_index += 1;
         let item_unwrapped: &toml::map::Map<String, toml::Value> = item.as_table().unwrap();
-        let item_prepared: RoleShopItem = RoleShopItem { // I hate this, what the actual fuck is this?? .unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap()
+        let item_prepared: RoleShopItem = RoleShopItem { // I hate this, what the actual fuck is this?? .unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap() 🤖
             id: item_unwrapped.get("id").unwrap().as_integer().unwrap() as u64,
             icon_id: item_unwrapped.get("icon_id").unwrap().as_integer().unwrap() as u64,
             icon_name: item_unwrapped.get("icon_name").unwrap().as_str().unwrap().to_string(),
             display_name: item_unwrapped.get("display_name").unwrap().as_str().unwrap().to_string(),
             description: item_unwrapped.get("description").unwrap().as_str().unwrap().to_string(),
             price: item_unwrapped.get("price").unwrap().as_integer().unwrap() as u32,
-        }; // TODO: Make roles buyable and give user role with item_prepared ID
+        };
 
         let item_emoji: ReactionType = ReactionType::Custom {
             animated: false,
@@ -433,17 +433,25 @@ pub async fn roleshop(
 
     let components: Vec<CreateActionRow> = vec![
         CreateActionRow::SelectMenu(
-            CreateSelectMenu::new("roleshopselector",
-            CreateSelectMenuKind::String {
-                options: options_vec
-            }
-        )
+            CreateSelectMenu::new("roleshop.selector",
+                CreateSelectMenuKind::String {
+                    options: options_vec
+                }
+            )
+        ),
+        CreateActionRow::Buttons(
+            vec![
+                CreateButton::new_link("discord://-/settings/guild-boosting?1334179500384059456")
+                    .label("Booooost Server")
+                    .emoji('🤩')
+            ]
         )
     ];
 
     ctx.send(CreateReply::default()
         .embed(CreateEmbed::default()
-            .description(format!("# Role Shop\n{}", response))
+            .title("Role Shop")
+            .description(format!("Currently PTL server is not Level 3, and we can't have icons in roles. However, you can fix that by **boosting our server <3**\nOnce server reaches Level 3 we will add icons to roles :D\n**=====**\n{}", response))
             .color(Color::from_rgb(255, 255, 255))
         )
         .components(components)
