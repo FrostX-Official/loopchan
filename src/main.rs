@@ -63,7 +63,7 @@ pub struct LevelingConfig {
 
 #[derive(Deserialize)]
 pub struct RoleShopItem {
-    id: u64, // TODO: Make roles buyable and give user role with this ID
+    id: u64,
     display_name: String,
     icon_id: u64,
     icon_name: String,
@@ -78,6 +78,7 @@ pub struct EconomyConfig {
     work_fail_chance: f32,
     work_cooldown: u64,
     work_payment: toml::value::Array,
+    shop_not_level_3_warn: bool,
     shop_items: toml::value::Array
 }
 

@@ -13,6 +13,7 @@ LASM_FM_API_SECRET=String
 Look into [Config.toml](/Config.toml) for description of config variables.
 
 ## TODOs ->
+* *l18n?*
 * Economics
   * [x] Balance
   * [x] Exp for chatting

@@ -1,4 +1,6 @@
-use serenity::all::{Color, ComponentInteraction, CreateEmbed, CreateInteractionResponse, CreateInteractionResponseMessage};
+// TODO: Add roleshop.buy.{id} handler
+
+use serenity::all::{ButtonStyle, Color, ComponentInteraction, CreateActionRow, CreateButton, CreateEmbed, CreateInteractionResponse, CreateInteractionResponseMessage};
 use tracing::{error, warn};
 
 use crate::{utils::database::economy::get_user_balance_in_eco_db, RoleShopItem};
@@ -53,6 +55,13 @@ pub async fn handle_interaction(
 
     let db_client: &async_sqlite::Client = &data.db_client; // User's data created in eco_db in pre_command hook, so no need to worry about that
     let balance_check: Result<u64, async_sqlite::Error> = get_user_balance_in_eco_db(db_client, author_id).await;
+
+    let components = vec![
+        CreateActionRow::Buttons(vec![
+            CreateButton::new(format!("roleshop.buy.{}", shop_item.id))
+                .label("Buy")
+                .style(ButtonStyle::Success),
+    ])];
     
     if !balance_check.is_ok() {
         error!("Failed to check {}'s balance: {}", author_id, balance_check.unwrap_err().to_string());
@@ -66,6 +75,7 @@ pub async fn handle_interaction(
                             .description(format!("*{}*\n\nActual Role: **<@&{}>**\nPrice: **${}**\n-# also failed to check your balance <:LoopchanOopsie:1376849367880826941>", shop_item.description, shop_item.id, shop_item.price))
                             .color(Color::from_rgb(255, 255, 255))
                     )
+                    .components(components)
                     .ephemeral(true)
             )
         ).await.unwrap();
@@ -85,7 +95,8 @@ pub async fn handle_interaction(
                         .description(format!("*{}*\n\nActual Role: **<@&{}>**\nPrice: **${}**\n\n*Your balance: **${}***", shop_item.description, shop_item.id, shop_item.price, balance))
                         .color(Color::from_rgb(255, 255, 255))
                 )
-                .ephemeral(true) // TODO: Add button component to buy role
+                .components(components)
+                .ephemeral(true)
         )
     ).await.unwrap();
 }

@@ -448,14 +448,25 @@ pub async fn roleshop(
         )
     ];
 
-    ctx.send(CreateReply::default()
-        .embed(CreateEmbed::default()
-            .title("Role Shop")
-            .description(format!("Currently PTL server is not Level 3, and we can't have icons in roles. However, you can fix that by **boosting our server <3**\nOnce server reaches Level 3 we will add icons to roles :D\n**=====**\n{}", response))
-            .color(Color::from_rgb(255, 255, 255))
-        )
-        .components(components)
-    ).await?;
+    if loopchans_config.economy.shop_not_level_3_warn {
+        ctx.send(CreateReply::default()
+            .embed(CreateEmbed::default()
+                .title("Role Shop")
+                .description(format!("Currently PTL server is not Level 3, and we can't have icons in roles. However, you can fix that by **boosting our server <3**\nOnce server reaches Level 3 we will add icons to roles :D\n**=====**\n{}", response))
+                .color(Color::from_rgb(255, 255, 255))
+            )
+            .components(components)
+        ).await?;
+    } else {
+        ctx.send(CreateReply::default()
+            .embed(CreateEmbed::default()
+                .title("Role Shop")
+                .description(response)
+                .color(Color::from_rgb(255, 255, 255))
+            )
+            .components(components)
+        ).await?;
+    }
 
     Ok(())
 }
