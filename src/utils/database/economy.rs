@@ -189,6 +189,19 @@ pub async fn increment_user_balance_in_eco_db(
     }).await;
 }
 
+pub async fn decrement_user_balance_in_eco_db(
+    db_client: &async_sqlite::Client,
+    discord_id: u64,
+    decrement: u64
+) -> Result<usize, async_sqlite::Error> {
+    return db_client.conn(move |conn: &async_sqlite::rusqlite::Connection| {
+        conn.execute(
+            "UPDATE economics SET balance=balance-(?2) WHERE discord_id=(?1)",
+            (discord_id, decrement)
+        )
+    }).await;
+}
+
 pub async fn get_roleshopitem_by_id(
     id: u64, shop_items: toml::value::Array
 ) -> Result<RoleShopItem, Error> {

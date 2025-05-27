@@ -577,6 +577,11 @@ async fn main() {
                         _ => {}
                     }
 
+                    let skip_cooldown = ctx.invocation_data::<bool>().await;
+                    if skip_cooldown.is_some() {
+                        return;
+                    }
+
                     let cc: poise::CooldownContext = poise::CooldownContext {
                         user_id: author.id,
                         channel_id: ctx.channel_id(),

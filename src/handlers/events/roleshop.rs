@@ -1,7 +1,7 @@
-use serenity::all::{ButtonStyle, Color, ComponentInteraction, CreateActionRow, CreateButton, CreateEmbed, CreateInteractionResponse, CreateInteractionResponseMessage};
+use serenity::all::{ButtonStyle, Color, ComponentInteraction, CreateActionRow, CreateButton, CreateEmbed, CreateInteractionResponse, CreateInteractionResponseMessage, Guild, RoleId};
 use tracing::{error, warn};
 
-use crate::{utils::database::economy::{get_roleshopitem_by_id, get_user_balance_in_eco_db}, RoleShopItem};
+use crate::{utils::database::economy::{decrement_user_balance_in_eco_db, get_roleshopitem_by_id, get_user_balance_in_eco_db}, RoleShopItem};
 
 pub async fn handle_roleshop_selector(
     ctx: &serenity::prelude::Context,
@@ -88,6 +88,24 @@ pub async fn handle_roleshop_buy(
     let role_id_str: String = interaction.data.custom_id.clone().split_off(13);
     let role_id: u64 = role_id_str.parse().unwrap();
 
+    let member = Guild::get(ctx, data.config.guild).await.unwrap().member(ctx, interaction.user.id).await.unwrap();
+    if member.roles.contains(&RoleId::new(role_id)) {
+        interaction.create_response(
+            ctx,
+            CreateInteractionResponse::UpdateMessage(
+                CreateInteractionResponseMessage::default()
+                    .embed(
+                        CreateEmbed::default()
+                            .description("You already have this role bought.")
+                            .color(Color::from_rgb(255, 100, 100))
+                    )
+                    .components(vec![])
+                    .ephemeral(true)
+            )
+        ).await.unwrap();
+        return;
+    }
+
     let shop_items: &Vec<toml::Value> = &data.config.economy.shop_items;
     let shop_item: Result<RoleShopItem, std::io::Error> = get_roleshopitem_by_id(role_id, shop_items.to_vec()).await;
 
@@ -134,7 +152,7 @@ pub async fn handle_roleshop_buy(
                 CreateInteractionResponseMessage::default()
                     .embed(
                         CreateEmbed::default()
-                            .description("you're broke") // TODO: Change (lol)
+                            .description("Insufficient Funds")
                             .color(Color::from_rgb(255, 100, 100))
                     )
                     .components(components)
@@ -144,7 +162,52 @@ pub async fn handle_roleshop_buy(
         return;
     }
 
-    // TODO: Finish role buying
+    let successful_decrement = decrement_user_balance_in_eco_db(db_client, author_id, shop_item.price.into()).await;
+
+    if successful_decrement.is_err() {
+        error!("Failed to decrease {}'s balance: {}", author_id, successful_decrement.unwrap_err().to_string());
+        let components = vec![
+            CreateActionRow::Buttons(vec![
+                CreateButton::new(format!("roleshop.buy.{}", shop_item.id))
+                    .label("Retry")
+                    .style(ButtonStyle::Danger),
+        ])];
+
+        interaction.create_response(
+            ctx,
+            CreateInteractionResponse::UpdateMessage(
+                CreateInteractionResponseMessage::default()
+                    .embed(
+                        CreateEmbed::default()
+                            .description("Failed to decrease your balance. Please try again later or contact <@908779319084589067>.")
+                            .color(Color::from_rgb(255, 100, 100))
+                    )
+                    .components(components)
+                    .ephemeral(true)
+            )
+        ).await.unwrap();
+        return;
+    }
+
+    let successfully_gave_shop_role: Result<(), serenity::Error> = member.add_role(ctx, RoleId::new(shop_item.id)).await;
+
+    if successfully_gave_shop_role.is_err() {
+        error!("Failed to give {} role to {}: {}", shop_item.id, author_id, successful_decrement.unwrap_err().to_string());
+        interaction.create_response(
+            ctx,
+            CreateInteractionResponse::UpdateMessage(
+                CreateInteractionResponseMessage::default()
+                    .embed(
+                        CreateEmbed::default()
+                            .description("Failed to give you role. Please contact <@908779319084589067> to receive your funds back.")
+                            .color(Color::from_rgb(255, 100, 100))
+                    )
+                    .components(vec![])
+                    .ephemeral(true)
+            )
+        ).await.unwrap();
+        return;
+    }
 
     interaction.create_response(
         ctx,
@@ -152,8 +215,8 @@ pub async fn handle_roleshop_buy(
             CreateInteractionResponseMessage::default()
                 .embed(
                     CreateEmbed::default()
-                        .description("wip")
-                        .color(Color::from_rgb(255, 255, 255))
+                        .description("Successfully bought role!")
+                        .color(Color::from_rgb(100, 255, 100))
                 )
                 .components(vec![])
                 .ephemeral(true)

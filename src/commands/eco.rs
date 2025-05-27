@@ -538,8 +538,27 @@ pub async fn work(
         return Ok(());
     }
 
+    let author_id: u64 = ctx.author().id.get();
+
     let add_to_balance: u64 = rand::rng().random_range(economy_config.work_payment[0].as_integer().unwrap()..economy_config.work_payment[1].as_integer().unwrap()).try_into().unwrap();
-    increment_user_balance_in_eco_db(&ctx.data().db_client, ctx.author().id.get(), add_to_balance).await?; // TODO: Handle error
+    let incremented_check: Result<usize, async_sqlite::Error> = increment_user_balance_in_eco_db(&ctx.data().db_client, author_id, add_to_balance).await;
+
+    if incremented_check.is_err() {
+        error!("Failed to update {}'s balance: {}", author_id, incremented_check.unwrap_err().to_string());
+        ctx.send(
+            CreateReply::default()
+                .embed(
+                    CreateEmbed::default()
+                        .description("Failed to update your balance. Please try again later or contact <@908779319084589067>.")
+                        .color(Color::from_rgb(255, 100, 100))
+                )
+                .ephemeral(true)
+        ).await?;
+
+        ctx.set_invocation_data(true).await; // cancel cooldown (hopefully)
+
+        return Ok(());
+    }
 
     let random_phrase_num = rand::rng().random_range(0..economy_config.work_phrases.len());
     let random_phrase = economy_config.work_phrases[random_phrase_num].as_str().unwrap();
