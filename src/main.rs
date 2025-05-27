@@ -65,7 +65,8 @@ pub struct LevelingConfig {
 pub struct RoleShopItem {
     id: u64, // TODO: Make roles buyable and give user role with this ID
     display_name: String,
-    icon: String,
+    icon_id: u64,
+    icon_name: String,
     description: String,
     price: u32,
 }
@@ -339,15 +340,15 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
 }
 
 
-async fn handle_message_component(
+async fn handle_message_component_interaction(
     ctx: &serenity::Context,
     _event: &serenity::FullEvent,
     _framework: poise::FrameworkContext<'_, Data, Error>,
     data: &Data,
-    component: &ComponentInteraction
+    interaction: &ComponentInteraction
 ) -> Result<(), Error> {
     let loopchans_config = &data.config;
-    if component.data.custom_id == "qa.invitation.accept" {
+    if interaction.data.custom_id == "qa.invitation.accept" {
         let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(loopchans_config.guild).unwrap().channels.clone();
         let qa_forms_channel = ptl_channels.get(&loopchans_config.channels.qa_forms.into());
         if qa_forms_channel.is_none() {
@@ -359,13 +360,13 @@ async fn handle_message_component(
             .embed(
                 CreateEmbed::default()
                     .title("QA Team Invitation")
-                    .description(format!("@{} (<@{}>) have accepted QA Team Invitation!", component.user.name, component.user.id))
+                    .description(format!("@{} (<@{}>) have accepted QA Team Invitation!", interaction.user.name, interaction.user.id))
                     .color(Color::from_rgb(100, 255, 100))
             )
         ).await?;
 
-        info!("@{} ({}) have accepted QA Team invitation!", component.user.name, component.user.id);
-        component.message.clone().edit(ctx, 
+        info!("@{} ({}) have accepted QA Team invitation!", interaction.user.name, interaction.user.id);
+        interaction.message.clone().edit(ctx, 
             EditMessage::default()
             .embed(
                 CreateEmbed::default()
@@ -377,8 +378,8 @@ async fn handle_message_component(
             ).components(vec![])
         ).await?;
 
-        component.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
-    } else if component.data.custom_id == "qa.invitation.deny" {
+        interaction.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
+    } else if interaction.data.custom_id == "qa.invitation.deny" {
         let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(loopchans_config.guild).unwrap().channels.clone();
         let qa_forms_channel = ptl_channels.get(&loopchans_config.channels.qa_forms.into());
         if qa_forms_channel.is_none() {
@@ -390,13 +391,13 @@ async fn handle_message_component(
             .embed(
                 CreateEmbed::default()
                     .title("QA Team Invitation")
-                    .description(format!("@{} (<@{}>) have declined QA Team Invitation!", component.user.name, component.user.id))
+                    .description(format!("@{} (<@{}>) have declined QA Team Invitation!", interaction.user.name, interaction.user.id))
                     .color(Color::from_rgb(255, 100, 100))
             )
         ).await?;
 
-        info!("@{} ({}) have declined QA Team invitation!", component.user.name, component.user.id);
-        component.message.clone().edit(ctx, 
+        info!("@{} ({}) have declined QA Team invitation!", interaction.user.name, interaction.user.id);
+        interaction.message.clone().edit(ctx, 
             EditMessage::default()
             .embed(
                 CreateEmbed::default()
@@ -407,9 +408,11 @@ async fn handle_message_component(
                     .color(Color::from_rgb(255, 100, 100))
             ).components(vec![])
         ).await?;
-        component.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
-    } else {
-        crate::handlers::events::verification::handle_interaction(ctx, component.clone(), data).await;
+        interaction.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
+    } else if interaction.data.custom_id.starts_with("verification") {
+        crate::handlers::events::verification::handle_interaction(ctx, interaction.clone(), data).await;
+    } else if interaction.data.custom_id.starts_with("roleshop") {
+        crate::handlers::events::roleshop::handle_interaction(ctx, interaction.clone(), data).await;
     }
 
     Ok(())
@@ -428,7 +431,7 @@ async fn event_handler(
         serenity::FullEvent::InteractionCreate { interaction } => { // Different interactions handling
             // Message Component
             let is_component: Option<ComponentInteraction> = interaction.clone().into_message_component();
-            if !is_component.is_none() { return handle_message_component(ctx, event, framework, data, &is_component.unwrap()).await; }
+            if !is_component.is_none() { return handle_message_component_interaction(ctx, event, framework, data, &is_component.unwrap()).await; }
         }
         serenity::FullEvent::Message { new_message } => {
             handlers::events::message::give_exp_for_message(new_message, data).await;

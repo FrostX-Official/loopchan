@@ -1,10 +1,10 @@
-use std::time::Duration;
+use std::{time::Duration, vec};
 
 use crate::{utils::{basic::generate_emoji_progressbar, database::economy::increment_user_balance_in_eco_db}, Context, Error, RoleShopItem};
 
 use poise::{CooldownConfig, CreateReply};
 use rand::Rng;
-use serenity::all::{Color, CreateEmbed};
+use serenity::all::{Color, CreateActionRow, CreateEmbed, CreateSelectMenu, CreateSelectMenuKind, CreateSelectMenuOption, ReactionType};
 use tracing::{error, info};
 
 use crate::utils::database::economy::{
@@ -393,6 +393,8 @@ pub async fn roleshop(
     let loopchans_config: &crate::LoopchanConfig = &ctx.data().config;
     let shop_items: &Vec<toml::Value> = &loopchans_config.economy.shop_items;
 
+    let mut options_vec: Vec<CreateSelectMenuOption> = vec![];
+
     let mut response: String = String::new();
     let mut item_index: u8 = 0;
     for item in shop_items {
@@ -400,14 +402,28 @@ pub async fn roleshop(
         let item_unwrapped: &toml::map::Map<String, toml::Value> = item.as_table().unwrap();
         let item_prepared: RoleShopItem = RoleShopItem { // I hate this, what the actual fuck is this?? .unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap()
             id: item_unwrapped.get("id").unwrap().as_integer().unwrap() as u64,
-            icon: item_unwrapped.get("icon").unwrap().as_str().unwrap().to_string(),
+            icon_id: item_unwrapped.get("icon_id").unwrap().as_integer().unwrap() as u64,
+            icon_name: item_unwrapped.get("icon_name").unwrap().as_str().unwrap().to_string(),
             display_name: item_unwrapped.get("display_name").unwrap().as_str().unwrap().to_string(),
             description: item_unwrapped.get("description").unwrap().as_str().unwrap().to_string(),
             price: item_unwrapped.get("price").unwrap().as_integer().unwrap() as u32,
         }; // TODO: Make roles buyable and give user role with item_prepared ID
 
-        response.push_str(&format!("{} **{}.** {} • *${}*\n*{}*\n\n",
-            item_prepared.icon,
+        let item_emoji: ReactionType = ReactionType::Custom {
+            animated: false,
+            id: item_prepared.icon_id.into(),
+            name: Some(item_prepared.icon_name.clone())
+        };
+
+        options_vec.push(
+            CreateSelectMenuOption::new(format!("{} • ${}", &item_prepared.display_name, &item_prepared.price), format!("roleshop.{}", item_prepared.id))
+                .emoji(item_emoji)
+                .description(&item_prepared.description)
+        );
+
+        response.push_str(&format!("<:{}:{}> **{}.** {} • *${}*\n*{}*\n\n",
+            item_prepared.icon_name,
+            item_prepared.icon_id,
             item_index,
             item_prepared.display_name,
             item_prepared.price,
@@ -415,11 +431,22 @@ pub async fn roleshop(
         ));
     }
 
+    let components: Vec<CreateActionRow> = vec![
+        CreateActionRow::SelectMenu(
+            CreateSelectMenu::new("roleshopselector",
+            CreateSelectMenuKind::String {
+                options: options_vec
+            }
+        )
+        )
+    ];
+
     ctx.send(CreateReply::default()
         .embed(CreateEmbed::default()
-            .description(format!("# indev\n{}", response))
+            .description(format!("# Role Shop\n{}", response))
             .color(Color::from_rgb(255, 255, 255))
         )
+        .components(components)
     ).await?;
 
     Ok(())
