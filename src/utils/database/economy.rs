@@ -203,28 +203,13 @@ pub async fn decrement_user_balance_in_eco_db(
 }
 
 pub async fn get_roleshopitem_by_id(
-    id: u64, shop_items: toml::value::Array
-) -> Result<RoleShopItem, Error> {
-    let mut shop_item: Option<RoleShopItem> = None;
+    id: u64, shop_items: &Vec<RoleShopItem>
+) -> Result<&RoleShopItem, Error> {
     for item in shop_items {
-        let item_unwrapped: &toml::map::Map<String, toml::Value> = item.as_table().unwrap();
-        let item_prepared: RoleShopItem = RoleShopItem { // I hate this, what the actual fuck is this?? .unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap() 🤖
-            id: item_unwrapped.get("id").unwrap().as_integer().unwrap() as u64,
-            icon_id: item_unwrapped.get("icon_id").unwrap().as_integer().unwrap() as u64,
-            icon_name: item_unwrapped.get("icon_name").unwrap().as_str().unwrap().to_string(),
-            display_name: item_unwrapped.get("display_name").unwrap().as_str().unwrap().to_string(),
-            description: item_unwrapped.get("description").unwrap().as_str().unwrap().to_string(),
-            price: item_unwrapped.get("price").unwrap().as_integer().unwrap() as u32,
-        };
-
-        if item_prepared.id == id {
-            shop_item = Some(item_prepared);
+        if item.id == id {
+            return Ok(item);
         }
     }
-    
-    if shop_item.is_some() {
-        return Ok(shop_item.unwrap());
-    }
 
-    return Err(Error::new(std::io::ErrorKind::Other, format!("Not found RoleShopItem by provided ID: {}", id)));
+    return Err(Error::new(std::io::ErrorKind::Other, format!("Not found RoleShopItem by provided ID: {}", id))); // How to make error properly??
 }

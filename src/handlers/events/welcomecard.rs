@@ -2,7 +2,7 @@ use tokio::io::AsyncWriteExt;
 
 use ab_glyph::{FontRef, PxScale, VariableFont};
 
-use ::serenity::all::{CreateAttachment, ChannelId, Color, CreateEmbed, CreateMessage, EmojiId, Member};
+use ::serenity::all::{CreateAttachment, ChannelId, Color, CreateEmbed, CreateMessage, Member};
 
 use poise::serenity_prelude as serenity;
 
@@ -105,7 +105,7 @@ pub async fn welcomecard(
         }
         let welcome_react: serenity::model::prelude::ReactionType = serenity::ReactionType::Custom {
             animated: loopchans_config.welcomecard.react_animated.unwrap(),
-            id: EmojiId::new(loopchans_config.welcomecard.react_id.unwrap()),
+            id: loopchans_config.welcomecard.react_id.unwrap().into(),
             name: loopchans_config.welcomecard.react_name.clone()
         };
         welcome_message.unwrap().react(ctx, welcome_react).await?;

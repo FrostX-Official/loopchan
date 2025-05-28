@@ -3,6 +3,7 @@
 pub mod linking;
 pub mod economy;
 pub mod lastfm;
+pub mod fishing;
 
 const DEFAULT_DATABASE_PATH: &'static str = "loopchan.db";
 

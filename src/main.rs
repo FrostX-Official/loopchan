@@ -11,7 +11,7 @@ use roboat;
 
 use ::serenity::prelude::TypeMapKey;
 
-use utils::database::{create_db, linking::prepare_users_db, economy::prepare_eco_db, lastfm::prepare_lastfm_db, linking::create_user_in_users_db, economy::create_user_in_eco_db};
+use utils::database::{create_db, fishing::prepare_fishing_db, linking::prepare_users_db, economy::prepare_eco_db, lastfm::prepare_lastfm_db, linking::create_user_in_users_db, economy::create_user_in_eco_db};
 
 use tokio::sync::Mutex;
 use std::collections::HashMap;
@@ -71,15 +71,41 @@ pub struct RoleShopItem {
     price: u32,
 }
 
+pub struct DataFish {
+    uuid: String,
+    r#type: String,
+    modifiers: String, // JSON encoded array
+    size: f32
+}
+
+#[derive(Deserialize)]
+pub struct FishModifier {
+    name: String,
+    description: String,
+    chance: u64,
+    value_multiplier: u64
+}
+
+#[derive(Deserialize, Clone)]
+pub struct Fish {
+    name: String,
+    color: String, // HEX
+    description: String,
+    base_value: u64,
+    possible_modifiers: Vec<String>
+}
+
 #[derive(Deserialize)]
 pub struct EconomyConfig {
-    work_phrases: toml::value::Array,
-    failed_work_phrases: toml::value::Array,
+    work_phrases: Vec<String>,
+    failed_work_phrases: Vec<String>,
     work_fail_chance: f32,
     work_cooldown: u64,
-    work_payment: toml::value::Array,
+    work_payment: Vec<u32>,
     shop_not_level_3_warn: bool,
-    shop_items: toml::value::Array
+    shop_items: Vec<RoleShopItem>,
+    fishes: Vec<Fish>,
+    fishes_modifiers: Vec<FishModifier>
 }
 
 #[derive(Deserialize)]
@@ -487,6 +513,7 @@ async fn main() {
     let sqlite_client: async_sqlite::Client = create_db(loopchans_config.database_path).await.expect("Failed connecting to users database");
     prepare_users_db(&sqlite_client).await;
     prepare_eco_db(&sqlite_client).await;
+    prepare_fishing_db(&sqlite_client).await;
     prepare_lastfm_db(&sqlite_client).await;
 
     // Loopchan's Poise Framework
@@ -499,6 +526,7 @@ async fn main() {
                 commands::qa::qa(),
                 commands::eco::eco(),
                 commands::lastfm::lastfm(),
+                commands::fishing::fishing()
             ],
             command_check: Some(|ctx| {
                 Box::pin(async move {
@@ -608,12 +636,11 @@ async fn main() {
                 ctx.set_activity(Some(PTL_PAID_TESTING_PRESENCE.clone()));
                 ctx.dnd();
 
-                info!("Ready!");
-
                 let ptl_guild_id: serenity::model::prelude::GuildId = loopchans_config.guild.into();
                 // Register commands
                 //poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                 poise::builtins::register_in_guild(&ctx.http, &framework.options().commands, ptl_guild_id).await?;
+                info!("Ready!");
                 // Create global data for commands and hooks
                 Ok(Data {
                     roblox_client: roboat::ClientBuilder::new().build(),

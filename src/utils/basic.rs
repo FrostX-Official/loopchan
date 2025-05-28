@@ -1,4 +1,6 @@
-use crate::Context;
+use std::io::Error;
+
+use crate::{Context, Fish, FishModifier};
 
 pub fn remove_whitespace(s: &str) -> String {
     s.chars().filter(|c: &char| !c.is_whitespace()).collect()
@@ -66,4 +68,40 @@ pub fn generate_emoji_progressbar(current: u64, max: u64, progressbar_size: u64,
             );
         }
     }
+}
+
+pub fn fish_from_name(
+    name: &String,
+    fishes: Vec<Fish>
+) -> Result<Fish, Error> {
+    for fish in fishes {
+        if fish.name != *name {
+            continue;
+        }
+        return Ok(fish);
+    }
+    return Err(Error::new(std::io::ErrorKind::Other, format!("Not found Fish by provided name: {}",name)));
+}
+
+pub fn get_fishes_names_from_fishes(
+    fishes: Vec<Fish>
+) -> Vec<String> {
+    let mut names = vec![];
+    for fish in fishes {
+        names.push(fish.name);
+    }
+    names
+}
+
+pub fn fishmodifier_from_name( // TODO: Show modifiers on fish in inventory once they will be available to obtain
+    name: String,
+    modifiers: Vec<FishModifier>
+) -> Result<FishModifier, Error> {
+    for modifier in modifiers {
+        if modifier.name != name {
+            continue;
+        }
+        return Ok(modifier);
+    }
+    return Err(Error::new(std::io::ErrorKind::Other, format!("Not found FishModifier by provided name: {}",name)));
 }

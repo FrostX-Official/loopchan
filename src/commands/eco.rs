@@ -391,7 +391,7 @@ pub async fn roleshop(
     ctx: Context<'_>
 ) -> Result<(), Error> {
     let loopchans_config: &crate::LoopchanConfig = &ctx.data().config;
-    let shop_items: &Vec<toml::Value> = &loopchans_config.economy.shop_items;
+    let shop_items: &Vec<RoleShopItem> = &loopchans_config.economy.shop_items;
 
     let mut options_vec: Vec<CreateSelectMenuOption> = vec![];
 
@@ -399,35 +399,26 @@ pub async fn roleshop(
     let mut item_index: u8 = 0;
     for item in shop_items {
         item_index += 1;
-        let item_unwrapped: &toml::map::Map<String, toml::Value> = item.as_table().unwrap();
-        let item_prepared: RoleShopItem = RoleShopItem { // I hate this, what the actual fuck is this?? .unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap().unwrap() 🤖
-            id: item_unwrapped.get("id").unwrap().as_integer().unwrap() as u64,
-            icon_id: item_unwrapped.get("icon_id").unwrap().as_integer().unwrap() as u64,
-            icon_name: item_unwrapped.get("icon_name").unwrap().as_str().unwrap().to_string(),
-            display_name: item_unwrapped.get("display_name").unwrap().as_str().unwrap().to_string(),
-            description: item_unwrapped.get("description").unwrap().as_str().unwrap().to_string(),
-            price: item_unwrapped.get("price").unwrap().as_integer().unwrap() as u32,
-        };
 
         let item_emoji: ReactionType = ReactionType::Custom {
             animated: false,
-            id: item_prepared.icon_id.into(),
-            name: Some(item_prepared.icon_name.clone())
+            id: item.icon_id.into(),
+            name: Some(item.icon_name.clone())
         };
 
         options_vec.push(
-            CreateSelectMenuOption::new(format!("{} • ${}", &item_prepared.display_name, &item_prepared.price), format!("roleshop.{}", item_prepared.id))
+            CreateSelectMenuOption::new(format!("{} • ${}", &item.display_name, &item.price), format!("roleshop.{}", item.id))
                 .emoji(item_emoji)
-                .description(&item_prepared.description)
+                .description(&item.description)
         );
 
         response.push_str(&format!("<:{}:{}> **{}.** {} • *${}*\n*{}*\n\n",
-            item_prepared.icon_name,
-            item_prepared.icon_id,
+            item.icon_name,
+            item.icon_id,
             item_index,
-            item_prepared.display_name,
-            item_prepared.price,
-            item_prepared.description,
+            item.display_name,
+            item.price,
+            item.description,
         ));
     }
 
@@ -472,7 +463,7 @@ pub async fn roleshop(
 }
 
 /// Work a parkourian job
-#[poise::command(slash_command)] // TODO: Make this look pretty
+#[poise::command(slash_command)] // TODO: Improve design
 pub async fn work(
     ctx: Context<'_>,
 ) -> Result<(), Error> {
@@ -530,7 +521,7 @@ pub async fn work(
             CreateReply::default()
                 .embed(
                     CreateEmbed::default()
-                        .description(economy_config.failed_work_phrases[random_phrase].as_str().unwrap())
+                        .description(economy_config.failed_work_phrases[random_phrase].clone())
                         .color(Color::from_rgb(255, 100, 100))
                 )
         ).await?;
@@ -540,7 +531,7 @@ pub async fn work(
 
     let author_id: u64 = ctx.author().id.get();
 
-    let add_to_balance: u64 = rand::rng().random_range(economy_config.work_payment[0].as_integer().unwrap()..economy_config.work_payment[1].as_integer().unwrap()).try_into().unwrap();
+    let add_to_balance: u64 = rand::rng().random_range(economy_config.work_payment[0]..economy_config.work_payment[1]).try_into().unwrap();
     let incremented_check: Result<usize, async_sqlite::Error> = increment_user_balance_in_eco_db(&ctx.data().db_client, author_id, add_to_balance).await;
 
     if incremented_check.is_err() {
@@ -561,7 +552,7 @@ pub async fn work(
     }
 
     let random_phrase_num = rand::rng().random_range(0..economy_config.work_phrases.len());
-    let random_phrase = economy_config.work_phrases[random_phrase_num].as_str().unwrap();
+    let random_phrase = economy_config.work_phrases[random_phrase_num].clone();
     ctx.send(
         CreateReply::default()
             .embed(

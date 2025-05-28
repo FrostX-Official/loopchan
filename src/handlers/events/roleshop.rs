@@ -21,14 +21,13 @@ pub async fn handle_roleshop_selector(
     let pressed_button_role_id_str: String = selector_option_id.clone().split_off(9);
     let pressed_button_role_id: u64 = pressed_button_role_id_str.parse().unwrap();
 
-    let shop_items: &Vec<toml::Value> = &data.config.economy.shop_items;
-    let shop_item: Result<RoleShopItem, std::io::Error> = get_roleshopitem_by_id(pressed_button_role_id, shop_items.to_vec()).await;
+    let shop_item: Result<&RoleShopItem, std::io::Error> = get_roleshopitem_by_id(pressed_button_role_id, &data.config.economy.shop_items).await;
 
     if shop_item.is_err() {
         warn!("Not found shop item with ID: {}", selector_option_id);
         return;
     }
-    let shop_item: RoleShopItem = shop_item.unwrap();
+    let shop_item: &RoleShopItem = shop_item.unwrap();
 
     let author_id: u64 = interaction.user.id.get();
 
@@ -80,7 +79,7 @@ pub async fn handle_roleshop_selector(
     ).await.unwrap();
 }
 
-pub async fn handle_roleshop_buy(
+pub async fn handle_roleshop_buy( // TODO: Improve design
     ctx: &serenity::prelude::Context,
     interaction: ComponentInteraction,
     data: &crate::Data
@@ -106,14 +105,14 @@ pub async fn handle_roleshop_buy(
         return;
     }
 
-    let shop_items: &Vec<toml::Value> = &data.config.economy.shop_items;
-    let shop_item: Result<RoleShopItem, std::io::Error> = get_roleshopitem_by_id(role_id, shop_items.to_vec()).await;
+    let shop_items: &Vec<RoleShopItem> = &data.config.economy.shop_items;
+    let shop_item: Result<&RoleShopItem, std::io::Error> = get_roleshopitem_by_id(role_id, shop_items).await;
 
     if shop_item.is_err() {
         warn!("Not found shop item with ID: {}", role_id);
         return;
     }
-    let shop_item: RoleShopItem = shop_item.unwrap();
+    let shop_item: &RoleShopItem = shop_item.unwrap();
 
     let db_client = &data.db_client;
     let author_id: u64 = interaction.user.id.get();

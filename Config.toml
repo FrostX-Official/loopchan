@@ -64,3 +64,10 @@ shop_items = [
     { id = 1376627136001085531, icon_id = 1376642267430781078, icon_name = "LoopchanEnforcer", display_name = "Enforcer", description = "An enforcer that protects city from crime & runners", price = 6942 },
     { id = 1376627238774247475, icon_id = 1376642282597646436, icon_name = "LoopchanPoslar", display_name = "Poslar", description = "evil.", price = 10000 },
 ]
+fishes = [
+    { name = "Salmon", color = "FF7E70", description = "Classic.", base_value = 5, possible_modifiers = ["Golden", "Ginormous"] }
+]
+fishes_modifiers = [
+    { name = "Ginormous", description = "A very big fish :D", chance = 100, value_multiplier = 5 },
+    { name = "Golden", description = "Woahh!~ Shiny!!", chance = 500, value_multiplier = 100 },
+]
