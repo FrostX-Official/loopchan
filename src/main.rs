@@ -83,7 +83,7 @@ pub struct FishModifier {
     name: String,
     description: String,
     chance: u64,
-    value_multiplier: u64
+    value_multiplier: f32
 }
 
 #[derive(Deserialize, Clone)]

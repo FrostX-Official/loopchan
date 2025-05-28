@@ -65,9 +65,12 @@ shop_items = [
     { id = 1376627238774247475, icon_id = 1376642282597646436, icon_name = "LoopchanPoslar", display_name = "Poslar", description = "evil.", price = 10000 },
 ]
 fishes = [
-    { name = "Salmon", color = "FF7E70", description = "Classic.", base_value = 5, possible_modifiers = ["Golden", "Ginormous"] }
+    { name = "Salmon", color = "FF7E70", description = "Classic.", base_value = 5, possible_modifiers = ["Golden", "Ginormous", "Rotten"] },
+    { name = "Tuna", color = "59CCE3", description = "Holy moly, a Tuna! I wonder what at-tuna-ment it is?", base_value = 3, possible_modifiers = ["Golden", "Ginormous", "Rotten"] },
+    { name = "Carp", color = "75959C", description = "Woah! An \"iron\" fish.. I wouldn't eat it.", base_value = 7, possible_modifiers = ["Golden", "Ginormous"] },
 ]
 fishes_modifiers = [
     { name = "Ginormous", description = "A very big fish :D", chance = 100, value_multiplier = 5 },
     { name = "Golden", description = "Woahh!~ Shiny!!", chance = 500, value_multiplier = 100 },
+    { name = "Rotten", description = "Ew.", chance = 50, value_multiplier = 0.5 },
 ]

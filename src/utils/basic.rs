@@ -93,7 +93,7 @@ pub fn get_fishes_names_from_fishes(
     names
 }
 
-pub fn fishmodifier_from_name( // TODO: Show modifiers on fish in inventory once they will be available to obtain
+pub fn _fishmodifier_from_name( // TODO: Show modifiers on fish in inventory once they will be available to obtain
     name: String,
     modifiers: Vec<FishModifier>
 ) -> Result<FishModifier, Error> {
