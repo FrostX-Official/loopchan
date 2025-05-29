@@ -1,3 +1,6 @@
+// TODO: Selling Fish
+// TODO: Trading Fish (and maybe gifting? (lol))
+
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use futures::{Stream, StreamExt};
@@ -237,7 +240,7 @@ pub async fn get_inventory_embeds(
 }
 
 /// See your inventory with fishes
-#[poise::command(slash_command)] // TODO: Selling (and trading)
+#[poise::command(slash_command)]
 pub async fn inventory(
     ctx: Context<'_>
 ) -> Result<(), Error> {
