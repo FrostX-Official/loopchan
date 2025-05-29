@@ -97,7 +97,7 @@ pub async fn get_inventory_embeds_after_interaction(
             continue;
         }
 
-        let actual_fish = fish_from_name(&fish.r#type, data.config.economy.fishes.clone()).unwrap();
+        let actual_fish = fish_from_name(&fish.r#type, &data.config.economy.fishes).unwrap();
 
         let modifiers: Result<Vec<crate::FishModifier>, std::io::Error> = fishmodifiers_from_datafishmodifiers(&fish.modifiers, data.config.economy.fishes_modifiers.clone());
         if modifiers.is_err() {
@@ -183,7 +183,7 @@ pub async fn get_inventory_embeds(
             continue;
         }
 
-        let actual_fish = fish_from_name(&fish.r#type, custom_data.config.economy.fishes.clone()).unwrap();
+        let actual_fish = fish_from_name(&fish.r#type, &custom_data.config.economy.fishes).unwrap();
 
         let modifiers: Result<Vec<crate::FishModifier>, std::io::Error> = fishmodifiers_from_datafishmodifiers(&fish.modifiers, custom_data.config.economy.fishes_modifiers.clone());
         if modifiers.is_err() {
@@ -311,7 +311,7 @@ async fn fish_type_autocomplete_handler<'a>(
     ctx: Context<'_>,
     partial: &'a str,
 ) -> impl Stream<Item = String> + 'a {
-    let fish_names = get_fishes_names_from_fishes(ctx.data().config.economy.fishes.clone()); // TODO: Cache this in data to make autocomplete faster
+    let fish_names: Vec<String> = get_fishes_names_from_fishes(&ctx.data().config.economy.fishes); // TODO: Cache this in data to make autocomplete faster
 
     futures::stream::iter(fish_names)
         .filter(move |name| futures::future::ready(name.starts_with(partial)))
@@ -328,7 +328,7 @@ pub async fn give_fish(
     #[description = "Fish Modifiers (separated by comma! (\",\"))"]
     modifiers: Option<String>,
 ) -> Result<(), Error> {
-    let actual_fish: Result<crate::Fish, std::io::Error> = fish_from_name(&r#type, ctx.data().config.economy.fishes.clone());
+    let actual_fish: Result<crate::Fish, std::io::Error> = fish_from_name(&r#type, &ctx.data().config.economy.fishes);
     if actual_fish.is_err() {
         error!("failed to give fish: {}", actual_fish.unwrap_err().to_string());
         ctx.send(CreateReply::default()

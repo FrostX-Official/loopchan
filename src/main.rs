@@ -94,7 +94,7 @@ pub struct Fish {
     name: String,
     chance: u32, // 1 in `chance`
     possible_size: Vec<f32>,
-    color: i32, // HEX // TODO: Make individual fish inspection and embed color with this color
+    color: i32, // HEX
     description: String,
     base_value: u64,
     possible_modifiers: Vec<String>

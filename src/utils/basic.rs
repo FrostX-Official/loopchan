@@ -74,23 +74,23 @@ pub fn generate_emoji_progressbar(current: u64, max: u64, progressbar_size: u64,
 
 pub fn fish_from_name(
     name: &String,
-    fishes: Vec<Fish>
+    fishes: &Vec<Fish>
 ) -> Result<Fish, Error> {
     for fish in fishes {
         if fish.name != *name {
             continue;
         }
-        return Ok(fish);
+        return Ok(fish.clone());
     }
     return Err(Error::new(std::io::ErrorKind::Other, format!("Not found Fish by provided name: {}",name)));
 }
 
 pub fn get_fishes_names_from_fishes(
-    fishes: Vec<Fish>
+    fishes: &Vec<Fish>
 ) -> Vec<String> {
     let mut names = vec![];
     for fish in fishes {
-        names.push(fish.name);
+        names.push(fish.name.clone());
     }
     names
 }
