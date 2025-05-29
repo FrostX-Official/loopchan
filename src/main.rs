@@ -94,7 +94,7 @@ pub struct Fish {
     name: String,
     chance: u32, // 1 in `chance`
     possible_size: Vec<f32>,
-    color: String, // HEX // TODO: Make individual fish inspection and embed color with this color
+    color: i32, // HEX // TODO: Make individual fish inspection and embed color with this color
     description: String,
     base_value: u64,
     possible_modifiers: Vec<String>
@@ -109,6 +109,7 @@ pub struct EconomyConfig {
     work_payment: Vec<u32>,
     shop_not_level_3_warn: bool,
     shop_items: Vec<RoleShopItem>,
+    fish_fail_chance: f32,
     fish_cooldown: u64,
     fishes: Vec<Fish>,
     fishes_modifiers: Vec<FishModifier>
@@ -446,6 +447,8 @@ async fn handle_message_component_interaction(
         crate::handlers::events::verification::handle_interaction(ctx, interaction.clone(), data).await;
     } else if interaction.data.custom_id.starts_with("roleshop") {
         crate::handlers::events::roleshop::handle_interaction(ctx, interaction.clone(), data).await;
+    } else if interaction.data.custom_id.starts_with("fishing.inventory.") {
+        crate::handlers::events::inventory_paginator::handle_interaction(ctx, interaction.clone(), data).await;
     }
 
     Ok(())

@@ -3,7 +3,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use futures::{Stream, StreamExt};
 use poise::{CooldownConfig, CreateReply};
 use rand::{distr::{weighted::WeightedIndex, Distribution}, rng, Rng};
-use serenity::{all::{Color, CreateEmbed}, json};
+use serenity::{all::{ButtonStyle, Color, ComponentInteraction, CreateActionRow, CreateButton, CreateEmbed, CreateEmbedFooter, CreateInteractionResponse, CreateInteractionResponseMessage}, json};
 use tracing::{error, warn};
 use uuid::Uuid;
 
@@ -13,8 +13,221 @@ use crate::{utils::{basic::{fish_from_name, fishmodifier_from_name, fishmodifier
 #[poise::command(slash_command, subcommands("give_fish", "inventory", "fish"), subcommand_required)]
 pub async fn fishing(_ctx: Context<'_>) -> Result<(), Error> { Ok(()) }
 
+pub fn get_inventory_components(
+    current_page: u32,
+    inventory_size: u32
+) -> Vec<CreateActionRow> {
+    let mut components = vec![CreateActionRow::Buttons(vec![])];
+
+    let prev_visible = current_page > 0;
+    let next_visible = (current_page+1)*5 < (inventory_size as u32);
+
+    if prev_visible {
+        match components.get(0).unwrap() {
+            CreateActionRow::Buttons(current_buttons) => {
+                let mut buttons = current_buttons.clone();
+                buttons.push(
+                    CreateButton::new(format!("fishing.inventory.prev.{current_page}"))
+                        .label("◀")
+                        .style(ButtonStyle::Secondary)
+                );
+                components = vec![CreateActionRow::Buttons(buttons)];
+            },
+            _ => {}
+        }
+    }
+    if next_visible {
+        match components.get(0).unwrap() {
+            CreateActionRow::Buttons(current_buttons) => {
+                let mut buttons = current_buttons.clone();
+                buttons.push(
+                    CreateButton::new(format!("fishing.inventory.next.{current_page}"))
+                        .label("▶")
+                        .style(ButtonStyle::Secondary)
+                );
+                components = vec![CreateActionRow::Buttons(buttons)];
+            },
+            _ => {}
+        }
+    }
+
+    if !prev_visible & !next_visible {
+        components = vec![];
+    }
+
+    components
+}
+
+pub async fn get_inventory_embeds_alt(
+    ctx: &serenity::prelude::Context,
+    interaction: &ComponentInteraction,
+    data: &crate::Data,
+    inventory: Vec<DataFish>,
+    page: u32
+) -> Option<Vec<CreateEmbed>> {
+    let mut embeds: Vec<CreateEmbed> = vec![
+        CreateEmbed::default()
+            .title(format!("🎣 Inventory{}", if page != 0 { format!(" | Page {}", page+1) } else { "".to_string() }))
+            .color(Color::from_rgb(255, 255, 255)) 
+    ];
+
+    let base_calc = (page+1)*5;
+    let max_index = if base_calc > 0 { base_calc } else { 5 };
+
+    let mut index: u32 = 0;
+    for fish in inventory {
+        index += 1;
+        if index < page*5 {
+            continue;
+        }
+        if index >= max_index {
+            continue;
+        }
+
+        let actual_fish = fish_from_name(&fish.r#type, data.config.economy.fishes.clone()).unwrap();
+
+        let modifiers: Result<Vec<crate::FishModifier>, std::io::Error> = fishmodifiers_from_datafishmodifiers(&fish.modifiers, data.config.economy.fishes_modifiers.clone());
+        if modifiers.is_err() {
+            error!("Failed to decode modifiers of fish {}: {}", fish.uuid, modifiers.unwrap_err().to_string());
+
+            interaction.create_response(
+                ctx,
+                CreateInteractionResponse::UpdateMessage(
+                    CreateInteractionResponseMessage::default()
+                        .embed(
+                            CreateEmbed::default()
+                                .description(format!("Failed to decode modifiers of fish `{}`", fish.uuid))
+                                .color(Color::from_rgb(255, 100, 100))
+                        )
+                        .components(vec![])
+                        .ephemeral(true)
+                )
+            ).await.unwrap();
+
+            return None;
+        }
+
+        let mut final_size: f32 = fish.size;
+        let mut final_value: f64 = actual_fish.base_value as f64;
+
+        let modifiers: Vec<crate::FishModifier> = modifiers.unwrap();
+        let mut modifiers_formatted = String::new();
+        if modifiers.len() > 0 {
+            modifiers_formatted.push_str("\n### Modifier(s):");
+            for modifier in modifiers {
+                if modifier.size_multiplier.is_some() {
+                    final_size *= modifier.size_multiplier.unwrap()
+                }
+
+                if modifier.value_multiplier.is_some() {
+                    final_value *= modifier.value_multiplier.unwrap() as f64
+                }
+                
+                modifiers_formatted.push_str(&format!("\n**{}** • *1 in {}* • *{}*", modifier.name, modifier.chance, modifier.description));
+            }
+        }
+
+        final_size = (final_size*100.0).floor()/100.0;
+        final_value = (final_value*final_size as f64).floor();
+
+        let final_string = format!(
+            "\n### {} • {}cm *(~${})*\n*{}*{}",
+            fish.r#type, final_size, final_value, actual_fish.description, modifiers_formatted
+        );
+        embeds.push(
+            CreateEmbed::default()
+                .description(final_string)
+                .footer(CreateEmbedFooter::new(fish.uuid))
+                .color(Color::from(actual_fish.color))
+        );
+    }
+
+    Some(embeds)
+}
+
+pub async fn get_inventory_embeds(
+    ctx: Context<'_>,
+    inventory: Vec<DataFish>,
+    page: u32
+) -> Option<Vec<CreateEmbed>> {
+    let custom_data = ctx.data();
+    let mut embeds: Vec<CreateEmbed> = vec![
+        CreateEmbed::default()
+            .title(format!("🎣 Inventory{}", if page != 0 { format!(" | Page {}", page+1) } else { "".to_string() }))
+            .color(Color::from_rgb(255, 255, 255)) 
+    ];
+
+    let base_calc = (page+1)*5;
+    let max_index = if base_calc > 0 { base_calc } else { 5 };
+
+    let mut index: u32 = 0;
+    for fish in inventory {
+        index += 1;
+        if index < page*5 {
+            continue;
+        }
+        if index >= max_index {
+            continue;
+        }
+
+        let actual_fish = fish_from_name(&fish.r#type, custom_data.config.economy.fishes.clone()).unwrap();
+
+        let modifiers: Result<Vec<crate::FishModifier>, std::io::Error> = fishmodifiers_from_datafishmodifiers(&fish.modifiers, custom_data.config.economy.fishes_modifiers.clone());
+        if modifiers.is_err() {
+            error!("Failed to decode modifiers of fish {}: {}", fish.uuid, modifiers.unwrap_err().to_string());
+
+            ctx.send(CreateReply::default()
+                .embed(
+                    CreateEmbed::default()
+                        .description(format!("Failed to decode modifiers of fish `{}`", fish.uuid))
+                        .color(Color::from_rgb(255, 100, 100))
+                )
+                .ephemeral(true)
+            ).await.unwrap();
+
+            return None;
+        }
+
+        let mut final_size: f32 = fish.size;
+        let mut final_value: f64 = actual_fish.base_value as f64;
+
+        let modifiers: Vec<crate::FishModifier> = modifiers.unwrap();
+        let mut modifiers_formatted = String::new();
+        if modifiers.len() > 0 {
+            modifiers_formatted.push_str("\n### Modifier(s):");
+            for modifier in modifiers {
+                if modifier.size_multiplier.is_some() {
+                    final_size *= modifier.size_multiplier.unwrap()
+                }
+
+                if modifier.value_multiplier.is_some() {
+                    final_value *= modifier.value_multiplier.unwrap() as f64
+                }
+                
+                modifiers_formatted.push_str(&format!("\n**{}** • *1 in {}* • *{}*", modifier.name, modifier.chance, modifier.description));
+            }
+        }
+
+        final_size = (final_size*100.0).floor()/100.0;
+        final_value = (final_value*final_size as f64).floor();
+
+        let final_string = format!(
+            "\n### {} • {}cm *(~${})*\n*{}*{}",
+            fish.r#type, final_size, final_value, actual_fish.description, modifiers_formatted
+        );
+        embeds.push(
+            CreateEmbed::default()
+                .description(final_string)
+                .footer(CreateEmbedFooter::new(fish.uuid))
+                .color(Color::from(actual_fish.color))
+        );
+    }
+
+    Some(embeds)
+}
+
 /// See your inventory with fishes
-#[poise::command(slash_command)] // TODO: Pagination
+#[poise::command(slash_command)] // TODO: Selling (and trading)
 pub async fn inventory(
     ctx: Context<'_>
 ) -> Result<(), Error> {
@@ -55,68 +268,28 @@ pub async fn inventory(
         return Ok(());
     }
 
-    let mut response: String = String::new();
-    let mut index: u32 = 0;
-    for fish in inventory {
-        index+=1;
-        let actual_fish = fish_from_name(&fish.r#type, custom_data.config.economy.fishes.clone()).unwrap();
+    let current_page: u32 = 0;
+    let embeds: Option<Vec<CreateEmbed>> = get_inventory_embeds(ctx, inventory, current_page).await;
 
-        let modifiers: Result<Vec<crate::FishModifier>, std::io::Error> = fishmodifiers_from_datafishmodifiers(&fish.modifiers, custom_data.config.economy.fishes_modifiers.clone());
-        if modifiers.is_err() {
-            error!("Failed to decode modifiers of fish {}: {}", fish.uuid, modifiers.unwrap_err().to_string());
-            ctx.send(CreateReply::default()
-                .embed(
-                    CreateEmbed::default()
-                        .description(format!("Failed to decode modifiers of fish `{}`", fish.uuid))
-                        .color(Color::from_rgb(255, 100, 100))
-                )
-                .ephemeral(true)
-            ).await?;
+    if embeds.is_none() {
+        ctx.send(CreateReply::default()
+            .embed(
+                CreateEmbed::default()
+                    .description("Failed to find your fishes! Please try again later, if the issue persists contact <@908779319084589067>")
+                    .color(Color::from_rgb(255, 100, 100))
+            )
+            .ephemeral(true)
+        ).await?;
 
-            return Ok(());
-        }
-
-        let mut final_size: f32 = fish.size;
-        let mut final_value: f64 = actual_fish.base_value as f64;
-
-        let modifiers: Vec<crate::FishModifier> = modifiers.unwrap();
-        let mut modifiers_formatted = String::new();
-        if modifiers.len() > 0 {
-            modifiers_formatted.push_str("\n**Modifier(s):**");
-            for modifier in modifiers {
-                if modifier.size_multiplier.is_some() {
-                    final_size *= modifier.size_multiplier.unwrap()
-                }
-
-                if modifier.value_multiplier.is_some() {
-                    final_value *= modifier.value_multiplier.unwrap() as f64
-                }
-                
-                modifiers_formatted.push_str(&format!("\n**{}** • *1 in {}* • *{}*", modifier.name, modifier.chance, modifier.description));
-            }
-        }
-
-        final_size = (final_size*100.0).floor()/100.0;
-        final_value = (final_value*final_size as f64).floor();
-
-        let mut final_string = format!(
-            "\n### {} • {}cm *(~${})*\n-# ID: *{}*\nDescription: *{}*{}",
-            fish.r#type, final_size, final_value, fish.uuid, actual_fish.description, modifiers_formatted
-        );
-        if index != inventory_size as u32 {
-            final_string.push_str("\n\n**==================================**");
-        }
-        response.push_str(&final_string);
+        return Ok(());
     }
 
-    ctx.send(CreateReply::default()
-        .embed(
-            CreateEmbed::default()
-                .title("🎣 Inventory")
-                .description(response)
-                .color(Color::from_rgb(255, 255, 255))
-        )
-    ).await?;
+    let components = get_inventory_components(current_page, inventory_size as u32);
+
+    let mut createreply = CreateReply::default();
+    createreply.embeds = embeds.unwrap();
+    createreply.components = Some(components);
+    ctx.send(createreply).await?;
 
     Ok(())
 }
@@ -205,8 +378,23 @@ pub async fn give_fish(
 pub async fn _fish(
     ctx: Context<'_>
 ) -> Result<(), Error> {
+    let custom_data = &ctx.data();
+    let loopchans_config = &custom_data.config;
+
+    if rand::rng().random_bool(loopchans_config.economy.fish_fail_chance.into()) {
+        ctx.send(CreateReply::default()
+            .embed(
+                CreateEmbed::default()
+                    .description("When you drive to nearest river it turns out your fishing rod is broken 😕\nCome back later 😓")
+                    .color(Color::from_rgb(255, 100, 100))
+            )
+        ).await?;
+
+        return Ok(());
+    }
+
     let (catched_fish, catched_modifiers, catched_size, catched_fishmodifiers) = {
-        let fishes = &ctx.data().config.economy.fishes;
+        let fishes = &loopchans_config.economy.fishes;
 
         let mut total_weight: u32 = 0;
         for fish in fishes {
@@ -225,7 +413,7 @@ pub async fn _fish(
         let mut fishmodifiers: Vec<FishModifier> = vec![];
 
         for modifier in &fish.possible_modifiers {
-            let real_modifier = fishmodifier_from_name(modifier, &ctx.data().config.economy.fishes_modifiers).unwrap();
+            let real_modifier = fishmodifier_from_name(modifier, &loopchans_config.economy.fishes_modifiers).unwrap();
             if rand::rng().random_range(..=real_modifier.chance) == 1 {
                 fishmodifiers.push(real_modifier);
                 modifiers.push(modifier.to_string());
@@ -242,6 +430,7 @@ pub async fn _fish(
         .embed(
             CreateEmbed::default()
                 .description(format!("<t:{}:R>", catch_time))
+                .color(Color::from_rgb(255, 160, 100))
         )
     ).await?;
 
@@ -268,7 +457,7 @@ pub async fn _fish(
 
     let uuid = Uuid::new_v4().to_string();
 
-    let successfully_gave_fish: Result<usize, async_sqlite::Error> = give_fish_to_user_in_fishing_db(&ctx.data().db_client, ctx.author().id.get(), DataFish {
+    let successfully_gave_fish: Result<usize, async_sqlite::Error> = give_fish_to_user_in_fishing_db(&custom_data.db_client, ctx.author().id.get(), DataFish {
         uuid: uuid.clone(),
         modifiers: catched_modifiers_serialized,
         r#type: catched_fish.name.clone(),
@@ -300,6 +489,7 @@ pub async fn _fish(
                         catched_modifiers.join(" "), catched_fish.name, final_size, final_value, catched_fish.description, uuid
                     )
                 )
+                .color(Color::from_rgb(100, 255, 100))
         )
     ).await?;
 
@@ -319,7 +509,7 @@ pub async fn _profish( // TODO: Fishing Minigame
     Ok(())
 }
 
-/// Catch a fish!
+/// Catch a fish! (or not...)
 #[poise::command(slash_command)]
 pub async fn fish(
     ctx: Context<'_>,

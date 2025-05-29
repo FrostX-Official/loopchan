@@ -54,9 +54,9 @@ failed_work_phrases = [
     "You've started a race against another runner, but **they were faster than you**.",
     "A patrol of **enforcers caught you while you were delivering** a package.",
 ]
-work_fail_chance    = 0.1           # Work has a chance to fail, user will not receive any amount of coins if that happens (10%)
-work_cooldown       = 20            # In minutes
-work_payment        = [100, 200]    # A range of how much you get for /eco work (randomized)
+work_fail_chance = 0.1        # Work has a chance to fail, user will not receive any amount of coins if that happens (10%)
+work_cooldown    = 20         # In minutes
+work_payment     = [100, 200] # A range of how much you get for /eco work (randomized)
 shop_not_level_3_warn = false # Should warn about server not being boost level 3 in shop?
 shop_items = [
     { id = 1376626127375962155, icon_id = 1376642201647583356, icon_name = "LoopchanTraceur", display_name = "Traceur", description = "An experienced runner", price = 500 },
@@ -64,17 +64,18 @@ shop_items = [
     { id = 1376627136001085531, icon_id = 1376642267430781078, icon_name = "LoopchanEnforcer", display_name = "Enforcer", description = "An enforcer that protects city from crime & runners", price = 6942 },
     { id = 1376627238774247475, icon_id = 1376642282597646436, icon_name = "LoopchanPoslar", display_name = "Poslar", description = "evil.", price = 10000 },
 ]
-fish_cooldown = 25   # In minutes
+fish_fail_chance = 0.1 # Fishing a fish has a chance to fail, user will not receive any fish if that happens (10%)
+fish_cooldown    = 0   # In minutes
 fishes = [
-    { name = "Salmon", chance = 8,  color = "FF7E70", possible_size = [70,100], description = "Classic.",                                             base_value = 5, possible_modifiers = ["Big", "Rotten"] },
-    { name = "Tuna",   chance = 1,  color = "59CCE3", possible_size = [110,210],description = "Holy moly, a Tuna! I wonder what at-tuna-ment it is?", base_value = 2, possible_modifiers = ["Golden", "Big", "Ginormous", "Rotten"] },
-    { name = "Carp",   chance = 6,  color = "75959C", possible_size = [40,120], description = "Woah! An \"iron\" fish.. I wouldn't eat it.",          base_value = 7, possible_modifiers = ["Golden", "Big", "Ginormous"] },
-    { name = "Axolotl",chance = 20, color = "F1A1FF", possible_size = [5,30],   description = "Look at how cute it is!! :3 :3",                       base_value = 20,possible_modifiers = ["Big", "Prismatic"] },
+    { name = "Salmon",  chance = 8,  color = 0xFF7E70, possible_size = [70,100],  description = "Classic.",                                             base_value = 5,  possible_modifiers = ["Big", "Rotten"] },
+    { name = "Tuna",    chance = 1,  color = 0x59CCE3, possible_size = [110,210], description = "Holy moly, a Tuna! I wonder what at-tuna-ment it is?", base_value = 2,  possible_modifiers = ["Golden", "Big", "Ginormous", "Rotten"] },
+    { name = "Carp",    chance = 6,  color = 0x75959C, possible_size = [40,120],  description = "Woah! An \"iron\" fish.. I wouldn't eat it.",          base_value = 7,  possible_modifiers = ["Golden", "Big", "Ginormous"] },
+    { name = "Axolotl", chance = 20, color = 0xF1A1FF, possible_size = [5,30],    description = "Look at how cute it is!! :3 :3",                       base_value = 20, possible_modifiers = ["Big", "Prismatic"] },
 ]
 fishes_modifiers = [
-    { name = "Big",         description = "A big fish :)",                        chance = 5,   value_multiplier = 1.5, size_multiplier = 5 },
-    { name = "Ginormous",   description = "A very big fish :D",                   chance = 30,  value_multiplier = 3,   size_multiplier = 20 },
-    { name = "Rotten",      description = "Ew.",                                  chance = 8,   value_multiplier = 0.5 },
-    { name = "Golden",      description = "Woahh!~ Shiny!!",                      chance = 100, value_multiplier = 10 },
-    { name = "Prismatic",   description = "WOWIE! A rainbow-looking creature!",   chance = 200, value_multiplier = 25 },
+    { name = "Big",       description = "A big fish :)",                      chance = 5,   size_multiplier = 2 },
+    { name = "Ginormous", description = "A very big fish :D",                 chance = 30,  size_multiplier = 10 },
+    { name = "Rotten",    description = "Ew. Just Ew.",                       chance = 8,   value_multiplier = 0.1, size_multiplier = 0.9 },
+    { name = "Golden",    description = "Woahh!~ Shiny!!",                    chance = 100, value_multiplier = 10 },
+    { name = "Prismatic", description = "WOWIE! A rainbow-looking creature!", chance = 200, value_multiplier = 25 },
 ]
