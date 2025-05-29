@@ -559,7 +559,7 @@ fn empty_fishing_minigame_matrix() -> Vec<CreateActionRow> {
     ]
 }
 
-pub async fn _fishminigame( // TODO: Fishing Minigame
+pub async fn _fishminigame(
     ctx: Context<'_>
 ) -> Result<(), Error> {
     let custom_data = &ctx.data();
