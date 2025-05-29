@@ -96,11 +96,11 @@ pub fn get_fishes_names_from_fishes(
 }
 
 pub fn fishmodifier_from_name(
-    name: String,
+    name: &String,
     modifiers: &Vec<FishModifier>
 ) -> Result<FishModifier, Error> {
     for modifier in modifiers {
-        if modifier.name != name {
+        if modifier.name != *name {
             continue;
         }
         return Ok(modifier.clone());
@@ -109,13 +109,13 @@ pub fn fishmodifier_from_name(
 }
 
 pub fn fishmodifiers_from_datafishmodifiers(
-    datafishmodifiers: String, // JSON encoded array of strings
+    datafishmodifiers: &String, // JSON encoded array of strings
     fishmodifiers: Vec<FishModifier>
 ) -> Result<Vec<FishModifier>, Error> {
     let decoded: Vec<String> = json::from_str(datafishmodifiers).unwrap();
     let mut modifiers = vec![];
     for modifier in decoded {
-        let found_modifier = fishmodifier_from_name(modifier, &fishmodifiers);
+        let found_modifier = fishmodifier_from_name(&modifier, &fishmodifiers);
         if found_modifier.is_err() {
             return Err(found_modifier.unwrap_err());
         }

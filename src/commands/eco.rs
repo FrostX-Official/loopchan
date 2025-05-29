@@ -463,7 +463,7 @@ pub async fn roleshop(
 }
 
 /// Work a parkourian job
-#[poise::command(slash_command)] // TODO: Improve design
+#[poise::command(slash_command)]
 pub async fn work(
     ctx: Context<'_>,
 ) -> Result<(), Error> {
@@ -493,7 +493,7 @@ pub async fn work(
                 CreateReply::default()
                     .embed(
                         CreateEmbed::default()
-                            .description(format!("You're currently too exhausted to work! Wait `{}` minutes.\n-# {} seconds", on_cooldown/60, on_cooldown))
+                            .description(format!("❌ You're currently too exhausted to work! Wait `{}` minutes.\n-# {} seconds", on_cooldown/60, on_cooldown))
                             .color(Color::from_rgb(255, 100, 100))
                     )
                     .ephemeral(true)
@@ -506,7 +506,7 @@ pub async fn work(
             CreateReply::default()
                 .embed(
                     CreateEmbed::default()
-                        .description(format!("You're currently too exhausted to work! Wait `{}` seconds.", on_cooldown))
+                        .description(format!("❌ You're currently too exhausted to work! Wait `{}` seconds.", on_cooldown))
                         .color(Color::from_rgb(255, 100, 100))
                 )
                 .ephemeral(true)
@@ -536,11 +536,12 @@ pub async fn work(
 
     if incremented_check.is_err() {
         error!("Failed to update {}'s balance: {}", author_id, incremented_check.unwrap_err().to_string());
+
         ctx.send(
             CreateReply::default()
                 .embed(
                     CreateEmbed::default()
-                        .description("Failed to update your balance. Please try again later or contact <@908779319084589067>.")
+                        .description("❌ Failed to update your balance. Please try again later, if the issue persists contact <@908779319084589067>")
                         .color(Color::from_rgb(255, 100, 100))
                 )
                 .ephemeral(true)

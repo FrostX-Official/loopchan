@@ -79,7 +79,7 @@ pub async fn handle_roleshop_selector(
     ).await.unwrap();
 }
 
-pub async fn handle_roleshop_buy( // TODO: Improve design
+pub async fn handle_roleshop_buy(
     ctx: &serenity::prelude::Context,
     interaction: ComponentInteraction,
     data: &crate::Data
@@ -95,7 +95,7 @@ pub async fn handle_roleshop_buy( // TODO: Improve design
                 CreateInteractionResponseMessage::default()
                     .embed(
                         CreateEmbed::default()
-                            .description("You already have this role bought.")
+                            .description("❌ You already have this role bought.")
                             .color(Color::from_rgb(255, 100, 100))
                     )
                     .components(vec![])
@@ -125,7 +125,7 @@ pub async fn handle_roleshop_buy( // TODO: Improve design
                 CreateInteractionResponseMessage::default()
                     .embed(
                         CreateEmbed::default()
-                            .description("Failed to check your balance. Please try again later.")
+                            .description("❌ Failed to check your balance. Please try again later.")
                             .color(Color::from_rgb(255, 100, 100))
                     )
                     .components(vec![])
@@ -151,7 +151,7 @@ pub async fn handle_roleshop_buy( // TODO: Improve design
                 CreateInteractionResponseMessage::default()
                     .embed(
                         CreateEmbed::default()
-                            .description("Insufficient Funds")
+                            .description("❌ Insufficient Funds!")
                             .color(Color::from_rgb(255, 100, 100))
                     )
                     .components(components)
@@ -165,6 +165,7 @@ pub async fn handle_roleshop_buy( // TODO: Improve design
 
     if successful_decrement.is_err() {
         error!("Failed to decrease {}'s balance: {}", author_id, successful_decrement.unwrap_err().to_string());
+
         let components = vec![
             CreateActionRow::Buttons(vec![
                 CreateButton::new(format!("roleshop.buy.{}", shop_item.id))
@@ -178,13 +179,14 @@ pub async fn handle_roleshop_buy( // TODO: Improve design
                 CreateInteractionResponseMessage::default()
                     .embed(
                         CreateEmbed::default()
-                            .description("Failed to decrease your balance. Please try again later or contact <@908779319084589067>.")
+                            .description("❌ Failed to decrease your balance. Please try again later, if the issue persists contact <@908779319084589067>")
                             .color(Color::from_rgb(255, 100, 100))
                     )
                     .components(components)
                     .ephemeral(true)
             )
         ).await.unwrap();
+
         return;
     }
 
@@ -192,19 +194,21 @@ pub async fn handle_roleshop_buy( // TODO: Improve design
 
     if successfully_gave_shop_role.is_err() {
         error!("Failed to give {} role to {}: {}", shop_item.id, author_id, successful_decrement.unwrap_err().to_string());
+        
         interaction.create_response(
             ctx,
             CreateInteractionResponse::UpdateMessage(
                 CreateInteractionResponseMessage::default()
                     .embed(
                         CreateEmbed::default()
-                            .description("Failed to give you role. Please contact <@908779319084589067> to receive your funds back.")
+                            .description("❌ Failed to give you role. Please contact <@908779319084589067> to receive your funds back.")
                             .color(Color::from_rgb(255, 100, 100))
                     )
                     .components(vec![])
                     .ephemeral(true)
             )
         ).await.unwrap();
+
         return;
     }
 
@@ -214,7 +218,7 @@ pub async fn handle_roleshop_buy( // TODO: Improve design
             CreateInteractionResponseMessage::default()
                 .embed(
                     CreateEmbed::default()
-                        .description("Successfully bought role!")
+                        .description("✅ Successfully bought role!")
                         .color(Color::from_rgb(100, 255, 100))
                 )
                 .components(vec![])

@@ -50,15 +50,15 @@ pub async fn get_roblox_id_in_users_db_by_discord_id(
     }).await
 }
 
-pub async fn _get_discord_id_in_users_db_by_roblox_id( // TODO: Made for pstats command
-    db_client: &async_sqlite::Client,
-    roblox_id: u64
-) -> Result<u64, async_sqlite::Error> {
-    db_client.conn(move |conn: &async_sqlite::rusqlite::Connection| {
-        conn.query_row(
-            "SELECT discord_id FROM users WHERE roblox_id=?",
-            [roblox_id],
-            |row| row.get(0),
-        )
-    }).await
-}
+// pub async fn _get_discord_id_in_users_db_by_roblox_id( // Unsure if this is going to be used, save just incase...
+//     db_client: &async_sqlite::Client,
+//     roblox_id: u64
+// ) -> Result<u64, async_sqlite::Error> {
+//     db_client.conn(move |conn: &async_sqlite::rusqlite::Connection| {
+//         conn.query_row(
+//             "SELECT discord_id FROM users WHERE roblox_id=?",
+//             [roblox_id],
+//             |row| row.get(0),
+//         )
+//     }).await
+// }

@@ -1,6 +1,7 @@
 use std::any::Any;
 use std::time::Duration;
 
+use poise::CreateReply;
 use serenity::all::{ButtonStyle, Color, CreateActionRow, CreateButton, CreateEmbed, CreateEmbedFooter};
 use tracing::{error, info};
 use crate::utils::database::lastfm::{save_lastfm_session_data, get_lastfm_session_data};
@@ -46,7 +47,8 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
             dont_check_session = true;
         } else {
             error!("Failed to get user's ({}) Last.fm session data: {}", author.id.get(), err_unwrapped.to_string());
-            ctx.send(poise::CreateReply::default()
+
+            ctx.send(CreateReply::default()
                 .embed(
                     CreateEmbed::default()
                         .description("Failed to check if you already authorized! Please try again later, if the issue persists contact <@908779319084589067>")
@@ -54,6 +56,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
                 )
                 .ephemeral(true)
             ).await?;
+
             return Ok(());
         }
     } else {
@@ -61,7 +64,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
     }
 
     if !dont_check_session {
-        let reply: poise::ReplyHandle<'_> = ctx.send(poise::CreateReply::default()
+        let reply: poise::ReplyHandle<'_> = ctx.send(CreateReply::default()
             .embed(
                 CreateEmbed::default()
                     .description("You already have a session key active.\n**Are you sure** you want to regenerate it?")
@@ -90,7 +93,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
         reply
             .edit(
                 ctx,
-                poise::CreateReply::default()
+                CreateReply::default()
                     .components(vec![])
                     .content("Processing..."),
             )
@@ -100,7 +103,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
             reply
                 .edit(
                     ctx,
-                    poise::CreateReply::default()
+                    CreateReply::default()
                         .content("Timed out."),
                 )
                 .await?;
@@ -114,7 +117,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
             reply
                 .edit(
                     ctx,
-                    poise::CreateReply::default()
+                    CreateReply::default()
                         .content("Cancelled."),
                 )
                 .await?;
@@ -128,7 +131,8 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
 
     if token_response.is_err() {
         error!("Failed to generate token for user ({}): {}", author.id.get(), token_response.unwrap_err().to_string());
-        ctx.send(poise::CreateReply::default()
+
+        ctx.send(CreateReply::default()
             .embed(
                 CreateEmbed::default()
                     .description("Failed to generate a token for you! Please try again later, if the issue persists contact <@908779319084589067>")
@@ -136,6 +140,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
             )
             .ephemeral(true)
         ).await?;
+
         return Ok(());
     }
 
@@ -147,7 +152,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
         token.replace("\"", "")
     );
 
-    let auth_reply: Result<poise::ReplyHandle<'_>, serenity::Error> = ctx.send(poise::CreateReply::default()
+    let auth_reply: Result<poise::ReplyHandle<'_>, serenity::Error> = ctx.send(CreateReply::default()
         .embed(
             CreateEmbed::default()
                 .description("Press `Done` button after confirmed `Connect` on Last.fm website.\n*(you have 5 minutes or less ||(i forgor)||)*")
@@ -186,7 +191,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
         reply
             .edit(
                 ctx,
-                poise::CreateReply::default()
+                CreateReply::default()
                     .components(vec![])
                     .content("Timed out.")
             )
@@ -196,7 +201,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
         reply
             .edit(
                 ctx,
-                poise::CreateReply::default()
+                CreateReply::default()
                     .components(vec![])
                     .content("Processing... Please wait."),
             )
@@ -208,7 +213,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
         reply
             .edit(
                 ctx,
-                poise::CreateReply::default()
+                CreateReply::default()
                     .content("Cancelled authorization.")
             )
             .await?;
@@ -218,13 +223,15 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
     let get_session_result = lastfm.auth().get_session().token(&token).send().await;
     if get_session_result.is_err() {
         error!("Failed to claim user's ({}) session key: {}", author.id.get(), get_session_result.unwrap_err().to_string()); 
+
         reply
             .edit(
                 ctx,
-                poise::CreateReply::default()
+                CreateReply::default()
                     .content("Failed to claim your session key. Please try again later, if the issue persists contact <@908779319084589067>")
             )
             .await?;
+
         return Ok(());
     }
 
@@ -236,13 +243,15 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
 
     if successful_save.is_err() {
         error!("Failed to save user's ({}) session key: {}", author.id.get(), successful_save.unwrap_err().to_string()); 
+
         reply
             .edit(
                 ctx,
-                poise::CreateReply::default()
+                CreateReply::default()
                     .content("Failed to save your session key. Please try again later, if the issue persists contact <@908779319084589067>")
             )
             .await?;
+
         return Ok(());
     }
 
@@ -264,7 +273,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
         reply
             .edit(
                 ctx,
-                poise::CreateReply::default()
+                CreateReply::default()
                     .content("")
                     .embed(
                         CreateEmbed::default()
@@ -285,7 +294,7 @@ pub async fn authorize(ctx: Context<'_>) -> Result<(), Error> {
         reply
             .edit(
                 ctx,
-                poise::CreateReply::default()
+                CreateReply::default()
                     .content("")
                     .embed(
                         CreateEmbed::default()
@@ -312,7 +321,7 @@ pub async fn currentlyplaying(ctx: Context<'_>) -> Result<(), Error> {
     let get_session_data: Result<(String, String), async_sqlite::Error> = get_lastfm_session_data(db_client, author.id.get()).await;
     if get_session_data.is_err() {
         error!("Failed to get {}'s session: {}", author.name, get_session_data.unwrap_err().to_string());
-        ctx.send(poise::CreateReply::default()
+        ctx.send(CreateReply::default()
             .embed(
                 CreateEmbed::default()
                     .description("Failed to get your session. Are you sure you've authorized before?\nTry again later or regenerate key with `/lastfm authorize`")
@@ -340,7 +349,8 @@ pub async fn currentlyplaying(ctx: Context<'_>) -> Result<(), Error> {
         },
         APIResponse::Error(get_recents_error) => {
             error!("Failed to get {}'s last.fm playing track: {}", author.id.get(), get_recents_error.message);
-            ctx.send(poise::CreateReply::default()
+
+            ctx.send(CreateReply::default()
                 .embed(
                     CreateEmbed::default()
                         .description("Failed to get your playing track. Please try again later, if the issue persists contact <@908779319084589067>")
@@ -348,13 +358,14 @@ pub async fn currentlyplaying(ctx: Context<'_>) -> Result<(), Error> {
                 )
                 .ephemeral(true)
             ).await?;
+            
             return Ok(());
         },
     }
 
     let recent_tracks = recents["recenttracks"]["track"].as_array().unwrap();
     if recent_tracks.len() < 1 {
-        ctx.send(poise::CreateReply::default()
+        ctx.send(CreateReply::default()
             .embed(
                 CreateEmbed::default()
                     .description("You don't have recent tracks on last.fm!")
@@ -378,7 +389,7 @@ pub async fn currentlyplaying(ctx: Context<'_>) -> Result<(), Error> {
         let last_track_has_nowplaying_attr = last_track["@attr"].as_object().unwrap().contains_key("nowplaying");
         if last_track_has_nowplaying_attr {
             if last_track["@attr"]["nowplaying"].as_str().unwrap() == "true" { // for some reason they return true as string, not boolean.
-                ctx.send(poise::CreateReply::default()
+                ctx.send(CreateReply::default()
                     .embed(
                         CreateEmbed::default()
                             .thumbnail(last_track_thumbnail)
@@ -399,7 +410,7 @@ pub async fn currentlyplaying(ctx: Context<'_>) -> Result<(), Error> {
         }
     }
 
-    ctx.send(poise::CreateReply::default()
+    ctx.send(CreateReply::default()
         .embed(
             CreateEmbed::default()
                 .description("Could not find the track you're listening to.\nBut here's the last track you've listened to:")

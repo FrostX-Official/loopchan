@@ -1,21 +1,20 @@
-// TODO: Actual fishing (mayhaps also a minigame for better fish?)
-
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use futures::{Stream, StreamExt};
 use poise::{CooldownConfig, CreateReply};
+use rand::{distr::{weighted::WeightedIndex, Distribution}, rng, Rng};
 use serenity::{all::{Color, CreateEmbed}, json};
 use tracing::{error, warn};
 use uuid::Uuid;
 
-use crate::{utils::{basic::{fish_from_name, fishmodifiers_from_datafishmodifiers, get_fishes_names_from_fishes, remove_whitespace}, database::fishing::{get_user_fishes_in_fishing_db, give_fish_to_user_in_fishing_db}}, Context, DataFish, Error};
+use crate::{utils::{basic::{fish_from_name, fishmodifier_from_name, fishmodifiers_from_datafishmodifiers, get_fishes_names_from_fishes, remove_whitespace}, database::fishing::{get_user_fishes_in_fishing_db, give_fish_to_user_in_fishing_db}}, Context, DataFish, Error, FishModifier};
 
 /// Fishing Commands
 #[poise::command(slash_command, subcommands("give_fish", "inventory", "fish"), subcommand_required)]
 pub async fn fishing(_ctx: Context<'_>) -> Result<(), Error> { Ok(()) }
 
 /// See your inventory with fishes
-#[poise::command(slash_command)]
+#[poise::command(slash_command)] // TODO: Pagination
 pub async fn inventory(
     ctx: Context<'_>
 ) -> Result<(), Error> {
@@ -23,15 +22,19 @@ pub async fn inventory(
     let db_client: &async_sqlite::Client = &custom_data.db_client;
     let inventory: Result<Vec<DataFish>, async_sqlite::Error> = get_user_fishes_in_fishing_db(db_client, ctx.author().id.get()).await;
 
-    if inventory.is_err() { // TODO: Handle properly
+    if inventory.is_err() {
+        error!("Failed to get {}'s fishes: {}", ctx.author().id.get(), inventory.unwrap_err().to_string());
+
         ctx.send(CreateReply::default()
             .embed(
                 CreateEmbed::default()
-                    .description("Failed")
+                    .description("Failed to find your fishes! Please try again later, if the issue persists contact <@908779319084589067>")
                     .color(Color::from_rgb(255, 100, 100))
             )
             .ephemeral(true)
         ).await?;
+
+        ctx.set_invocation_data(true).await; // cancel cooldown (hopefully)
 
         return Ok(());
     }
@@ -58,7 +61,7 @@ pub async fn inventory(
         index+=1;
         let actual_fish = fish_from_name(&fish.r#type, custom_data.config.economy.fishes.clone()).unwrap();
 
-        let modifiers: Result<Vec<crate::FishModifier>, std::io::Error> = fishmodifiers_from_datafishmodifiers(fish.modifiers, custom_data.config.economy.fishes_modifiers.clone());
+        let modifiers: Result<Vec<crate::FishModifier>, std::io::Error> = fishmodifiers_from_datafishmodifiers(&fish.modifiers, custom_data.config.economy.fishes_modifiers.clone());
         if modifiers.is_err() {
             error!("Failed to decode modifiers of fish {}: {}", fish.uuid, modifiers.unwrap_err().to_string());
             ctx.send(CreateReply::default()
@@ -172,7 +175,7 @@ pub async fn give_fish(
     let db_client: &async_sqlite::Client = &ctx.data().db_client;
     let successfully_gave_fish: Result<usize, async_sqlite::Error> = give_fish_to_user_in_fishing_db(db_client, ctx.author().id.get(), DataFish {
         uuid: Uuid::new_v4().to_string(),
-        modifiers: modifiers_serialized, // TODO: Make ability to modify fish or/and give fish with modifiers from the start
+        modifiers: modifiers_serialized,
         r#type,
         size
     }).await;
@@ -199,10 +202,129 @@ pub async fn give_fish(
     Ok(())
 }
 
+pub async fn _fish(
+    ctx: Context<'_>
+) -> Result<(), Error> {
+    let (catched_fish, catched_modifiers, catched_size, catched_fishmodifiers) = {
+        let fishes = &ctx.data().config.economy.fishes;
+
+        let mut total_weight: u32 = 0;
+        for fish in fishes {
+            total_weight += fish.chance;
+        }
+    
+        let weights: Vec<u32> = fishes.iter().map(|fish| total_weight-fish.chance).collect();
+        let dist = WeightedIndex::new(&weights).unwrap();
+
+        let mut rng = rng();
+        let index = dist.sample(&mut rng);
+
+        let fish: &crate::Fish = &fishes[index];
+
+        let mut modifiers: Vec<String> = vec![];
+        let mut fishmodifiers: Vec<FishModifier> = vec![];
+
+        for modifier in &fish.possible_modifiers {
+            let real_modifier = fishmodifier_from_name(modifier, &ctx.data().config.economy.fishes_modifiers).unwrap();
+            if rand::rng().random_range(..=real_modifier.chance) == 1 {
+                fishmodifiers.push(real_modifier);
+                modifiers.push(modifier.to_string());
+            }
+        }
+
+        (fish, modifiers, rand::rng().random_range(fish.possible_size[0]..=fish.possible_size[1]), fishmodifiers)
+    };
+    let catched_modifiers_serialized: String = json::to_string(&catched_modifiers).unwrap();
+
+    let catch_time: u64 = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()+20;
+
+    let reply: poise::ReplyHandle<'_> = ctx.send(CreateReply::default()
+        .embed(
+            CreateEmbed::default()
+                .description(format!("<t:{}:R>", catch_time))
+        )
+    ).await?;
+
+    tokio::time::sleep(Duration::from_secs(19)).await; // Assuming sending takes ~1 second
+
+    let mut final_size: f32 = catched_size;
+    let mut final_value: f64 = catched_fish.base_value as f64;
+
+    let modifiers: Vec<FishModifier> = catched_fishmodifiers;
+    if modifiers.len() > 0 {
+        for modifier in modifiers {
+            if modifier.size_multiplier.is_some() {
+                final_size *= modifier.size_multiplier.unwrap()
+            }
+
+            if modifier.value_multiplier.is_some() {
+                final_value *= modifier.value_multiplier.unwrap() as f64
+            }
+        }
+    }
+
+    final_size = (final_size*100.0).floor()/100.0;
+    final_value = (final_value*final_size as f64).floor();
+
+    let uuid = Uuid::new_v4().to_string();
+
+    let successfully_gave_fish: Result<usize, async_sqlite::Error> = give_fish_to_user_in_fishing_db(&ctx.data().db_client, ctx.author().id.get(), DataFish {
+        uuid: uuid.clone(),
+        modifiers: catched_modifiers_serialized,
+        r#type: catched_fish.name.clone(),
+        size: catched_size
+    }).await;
+
+    if successfully_gave_fish.is_err() {
+        error!("Failed to give fish to {}: {}", ctx.author().id.get(), successfully_gave_fish.unwrap_err().to_string());
+
+        reply.edit(ctx, CreateReply::default()
+            .embed(
+                CreateEmbed::default()
+                    .description("Failed to give you fish! Please try again later, if the issue persists contact <@908779319084589067>")
+                    .color(Color::from_rgb(255, 100, 100))
+            )
+        ).await?;
+
+        ctx.set_invocation_data(true).await; // cancel cooldown (hopefully)
+
+        return Ok(());
+    }
+
+    reply.edit(ctx, CreateReply::default()
+        .embed(
+            CreateEmbed::default()
+                .description(
+                    format!(
+                        "You catched **{} {} • {}cm! *(~${})***\n*\"{}\"*\n-# ID: {}\n-# Check your inventory for more information.",
+                        catched_modifiers.join(" "), catched_fish.name, final_size, final_value, catched_fish.description, uuid
+                    )
+                )
+        )
+    ).await?;
+
+    Ok(())
+}
+
+pub async fn _profish( // TODO: Fishing Minigame
+    ctx: Context<'_>
+) -> Result<(), Error> {
+    ctx.send(CreateReply::default()
+        .embed(
+            CreateEmbed::default()
+                .description("wip")
+        )
+    ).await?;
+
+    Ok(())
+}
+
 /// Catch a fish!
 #[poise::command(slash_command)]
 pub async fn fish(
-    ctx: Context<'_>
+    ctx: Context<'_>,
+    #[description = "Enable catching minigame for better fish"]
+    pro_mode: Option<bool>
 ) -> Result<(), Error> {
     let economy_config: &crate::EconomyConfig = &ctx.data().config.economy;
     let on_cooldown: i32;
@@ -252,14 +374,13 @@ pub async fn fish(
         return Ok(());
     }
 
-    // TODO: Actual fishing (mayhaps also a minigame for better fish?)
+    if pro_mode.is_some() {
+        if pro_mode.unwrap() {
+            // MINIGAME
+            return _profish(ctx).await;
+        }
+    }
 
-    ctx.send(CreateReply::default()
-        .embed(
-            CreateEmbed::default()
-                .description("wip")
-        )
-    ).await?;
-
-    Ok(())
+    // Basic waiting fishing
+    return _fish(ctx).await;
 }

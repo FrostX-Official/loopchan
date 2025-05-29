@@ -14,6 +14,7 @@ Look into [Config.toml](/Config.toml) for description of config variables.
 
 ## TODOs ->
 * *l18n?*
+* Counting channel moderation
 * Economics
   * [x] Balance
   * [x] Exp for chatting
@@ -22,12 +23,15 @@ Look into [Config.toml](/Config.toml) for description of config variables.
   * [x] Work for coins commands *(with cooldown like 30 minutes)*
   * [ ] Custom Role Shop
   * [ ] More admin commands (like customizing balance)
-  * [ ] Fishing & Fish Inventory & Fish transactions between players (😍)
+  * Fishing (😍)
+    * [ ] Actual fishing
+    * [x] Fish Inventory
+    * [x] Fish DB
+    * [ ] Fish transactions between players (trading)
 * Last.fm
   * [x] Authorization
   * [ ] Get info about tracks, albums & artists commands
   * [ ] Server leaderboard for like specific artist
-
 * Giveaways
 * New Design
   * [ ] Profile Picture

@@ -72,6 +72,7 @@ pub struct RoleShopItem {
     price: u32,
 }
 
+#[derive(Debug)]
 pub struct DataFish {
     uuid: String,
     r#type: String,
@@ -91,6 +92,8 @@ pub struct FishModifier {
 #[derive(Deserialize, Clone, Debug)]
 pub struct Fish {
     name: String,
+    chance: u32, // 1 in `chance`
+    possible_size: Vec<f32>,
     color: String, // HEX // TODO: Make individual fish inspection and embed color with this color
     description: String,
     base_value: u64,
