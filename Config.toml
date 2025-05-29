@@ -54,23 +54,27 @@ failed_work_phrases = [
     "You've started a race against another runner, but **they were faster than you**.",
     "A patrol of **enforcers caught you while you were delivering** a package.",
 ]
-work_fail_chance    = 0.1  # Work has a chance to fail, user will not receive any amount of coins if that happens (10%)
-work_cooldown       = 20   # In minutes
-work_payment = [100, 200]  # A range of how much you get for /eco work (randomized)
-shop_not_level_3_warn = true
+work_fail_chance    = 0.1           # Work has a chance to fail, user will not receive any amount of coins if that happens (10%)
+work_cooldown       = 20            # In minutes
+work_payment        = [100, 200]    # A range of how much you get for /eco work (randomized)
+shop_not_level_3_warn = false # Should warn about server not being boost level 3 in shop?
 shop_items = [
     { id = 1376626127375962155, icon_id = 1376642201647583356, icon_name = "LoopchanTraceur", display_name = "Traceur", description = "An experienced runner", price = 500 },
     { id = 1376625906893848637, icon_id = 1376642240566263818, icon_name = "LoopchanElysium", display_name = "Elysium Employee", description = "An elysium employee that is allied with runners", price = 1499 },
     { id = 1376627136001085531, icon_id = 1376642267430781078, icon_name = "LoopchanEnforcer", display_name = "Enforcer", description = "An enforcer that protects city from crime & runners", price = 6942 },
     { id = 1376627238774247475, icon_id = 1376642282597646436, icon_name = "LoopchanPoslar", display_name = "Poslar", description = "evil.", price = 10000 },
 ]
+fish_cooldown = 10   # In minutes
 fishes = [
-    { name = "Salmon", color = "FF7E70", description = "Classic.", base_value = 5, possible_modifiers = ["Golden", "Ginormous", "Rotten"] },
-    { name = "Tuna", color = "59CCE3", description = "Holy moly, a Tuna! I wonder what at-tuna-ment it is?", base_value = 3, possible_modifiers = ["Golden", "Ginormous", "Rotten"] },
-    { name = "Carp", color = "75959C", description = "Woah! An \"iron\" fish.. I wouldn't eat it.", base_value = 7, possible_modifiers = ["Golden", "Ginormous"] },
+    { name = "Salmon", color = "FF7E70", description = "Classic.", base_value = 5, possible_modifiers = ["Golden", "Ginormous", "Big", "Rotten"] },
+    { name = "Tuna", color = "59CCE3", description = "Holy moly, a Tuna! I wonder what at-tuna-ment it is?", base_value = 3, possible_modifiers = ["Golden", "Big", "Ginormous", "Rotten"] },
+    { name = "Carp", color = "75959C", description = "Woah! An \"iron\" fish.. I wouldn't eat it.", base_value = 7, possible_modifiers = ["Golden", "Big", "Ginormous"] },
+    { name = "Axolotl", color = "F1A1FF", description = "Look at how cute it is!! :3 :3", base_value = 20, possible_modifiers = ["Big", "Prismatic"] },
 ]
 fishes_modifiers = [
-    { name = "Ginormous", description = "A very big fish :D", chance = 100, value_multiplier = 5 },
+    { name = "Ginormous", description = "A very big fish :D", chance = 100, value_multiplier = 5, size_multiplier = 20 },
+    { name = "Big", description = "A big fish :)", chance = 10, value_multiplier = 3, size_multiplier = 5 },
     { name = "Golden", description = "Woahh!~ Shiny!!", chance = 500, value_multiplier = 100 },
     { name = "Rotten", description = "Ew.", chance = 50, value_multiplier = 0.5 },
+    { name = "Prismatic", description = "WOWIE! A rainbow-looking creature!", chance = 1000, value_multiplier = 150 },
 ]

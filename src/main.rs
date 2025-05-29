@@ -1,5 +1,6 @@
 use dotenv::dotenv;
 
+use serde::Serialize;
 use ::serenity::all::{ChannelId, Color, ComponentInteraction, CreateAllowedMentions, CreateEmbed, CreateMessage, EditMessage};
 
 use poise::CreateReply;
@@ -78,18 +79,19 @@ pub struct DataFish {
     size: f32
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct FishModifier {
     name: String,
     description: String,
     chance: u64,
-    value_multiplier: f32
+    value_multiplier: Option<f32>,
+    size_multiplier: Option<f32>
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct Fish {
     name: String,
-    color: String, // HEX
+    color: String, // HEX // TODO: Make individual fish inspection and embed color with this color
     description: String,
     base_value: u64,
     possible_modifiers: Vec<String>
@@ -104,6 +106,7 @@ pub struct EconomyConfig {
     work_payment: Vec<u32>,
     shop_not_level_3_warn: bool,
     shop_items: Vec<RoleShopItem>,
+    fish_cooldown: u64,
     fishes: Vec<Fish>,
     fishes_modifiers: Vec<FishModifier>
 }

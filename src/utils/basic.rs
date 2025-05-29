@@ -1,5 +1,7 @@
 use std::io::Error;
 
+use serenity::json;
+
 use crate::{Context, Fish, FishModifier};
 
 pub fn remove_whitespace(s: &str) -> String {
@@ -93,15 +95,31 @@ pub fn get_fishes_names_from_fishes(
     names
 }
 
-pub fn _fishmodifier_from_name( // TODO: Show modifiers on fish in inventory once they will be available to obtain
+pub fn fishmodifier_from_name(
     name: String,
-    modifiers: Vec<FishModifier>
+    modifiers: &Vec<FishModifier>
 ) -> Result<FishModifier, Error> {
     for modifier in modifiers {
         if modifier.name != name {
             continue;
         }
-        return Ok(modifier);
+        return Ok(modifier.clone());
     }
     return Err(Error::new(std::io::ErrorKind::Other, format!("Not found FishModifier by provided name: {}",name)));
+}
+
+pub fn fishmodifiers_from_datafishmodifiers(
+    datafishmodifiers: String, // JSON encoded array of strings
+    fishmodifiers: Vec<FishModifier>
+) -> Result<Vec<FishModifier>, Error> {
+    let decoded: Vec<String> = json::from_str(datafishmodifiers).unwrap();
+    let mut modifiers = vec![];
+    for modifier in decoded {
+        let found_modifier = fishmodifier_from_name(modifier, &fishmodifiers);
+        if found_modifier.is_err() {
+            return Err(found_modifier.unwrap_err());
+        }
+        modifiers.push(found_modifier.unwrap());
+    }
+    Ok(modifiers)
 }
