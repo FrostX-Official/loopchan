@@ -27,6 +27,11 @@ pub fn get_inventory_components(
             CreateActionRow::Buttons(current_buttons) => {
                 let mut buttons = current_buttons.clone();
                 buttons.push(
+                    CreateButton::new(format!("fishing.inventory.superprev.{current_page}"))
+                        .label("⏮")
+                        .style(ButtonStyle::Secondary)
+                );
+                buttons.push(
                     CreateButton::new(format!("fishing.inventory.prev.{current_page}"))
                         .label("◀")
                         .style(ButtonStyle::Secondary)
@@ -45,6 +50,11 @@ pub fn get_inventory_components(
                         .label("▶")
                         .style(ButtonStyle::Secondary)
                 );
+                buttons.push(
+                    CreateButton::new(format!("fishing.inventory.supernext.{current_page}"))
+                        .label("⏭")
+                        .style(ButtonStyle::Secondary)
+                );
                 components = vec![CreateActionRow::Buttons(buttons)];
             },
             _ => {}
@@ -58,7 +68,7 @@ pub fn get_inventory_components(
     components
 }
 
-pub async fn get_inventory_embeds_alt(
+pub async fn get_inventory_embeds_after_interaction(
     ctx: &serenity::prelude::Context,
     interaction: &ComponentInteraction,
     data: &crate::Data,

@@ -1,9 +1,7 @@
-// TODO: Improve pagination (more buttons, like move next until end, etc.)
-
 use serenity::all::{Color, ComponentInteraction, CreateEmbed, CreateInteractionResponse, CreateInteractionResponseMessage};
 use tracing::error;
 
-use crate::{commands::fishing::{get_inventory_components, get_inventory_embeds_alt}, utils::database::fishing::get_user_fishes_in_fishing_db, DataFish};
+use crate::{commands::fishing::{get_inventory_components, get_inventory_embeds_after_interaction}, utils::database::fishing::get_user_fishes_in_fishing_db, DataFish};
 
 
 pub async fn handle_interaction(
@@ -14,13 +12,6 @@ pub async fn handle_interaction(
     let interaction_id: &String = &interaction.data.custom_id;
     if !interaction_id.starts_with("fishing.inventory.") {
         return;
-    }
-
-    let mut current_page: u32 = interaction_id.split(".").last().unwrap().parse().unwrap();
-    if interaction_id.starts_with("fishing.inventory.prev") {
-        current_page -= 1;
-    } else {
-        current_page += 1;
     }
 
     let author_id: u64 = interaction.user.id.get();
@@ -70,7 +61,18 @@ pub async fn handle_interaction(
         return;
     }
 
-    let embeds: Option<Vec<CreateEmbed>> = get_inventory_embeds_alt(ctx, &interaction, data, inventory, current_page).await;
+    let mut current_page: u32 = interaction_id.split(".").last().unwrap().parse().unwrap();
+    if interaction_id.starts_with("fishing.inventory.prev") {
+        current_page -= 1;
+    } else if interaction_id.starts_with("fishing.inventory.superprev") {
+        current_page = 0;
+    } else if interaction_id.starts_with("fishing.inventory.supernext") {
+        current_page = inventory_size as u32/5;
+    } else {
+        current_page += 1;
+    }
+
+    let embeds: Option<Vec<CreateEmbed>> = get_inventory_embeds_after_interaction(ctx, &interaction, data, inventory, current_page).await;
 
     if embeds.is_none() {
         interaction.create_response(
