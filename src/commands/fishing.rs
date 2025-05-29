@@ -509,13 +509,228 @@ pub async fn _fish(
     Ok(())
 }
 
-pub async fn _profish( // TODO: Fishing Minigame
+fn empty_fishing_minigame_matrix() -> Vec<CreateActionRow> {
+    vec![
+        CreateActionRow::Buttons(
+            vec![
+                CreateButton::new("fishing.minigame.1_1").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.1_2").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.1_3").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.1_4").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.1_5").style(ButtonStyle::Primary).label("ㅤ")
+            ]
+        ),
+        CreateActionRow::Buttons(
+            vec![
+                CreateButton::new("fishing.minigame.2_1").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.2_2").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.2_3").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.2_4").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.2_5").style(ButtonStyle::Primary).label("ㅤ")
+            ]
+        ),
+        CreateActionRow::Buttons(
+            vec![
+                CreateButton::new("fishing.minigame.3_1").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.3_2").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.3_3").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.3_4").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.3_5").style(ButtonStyle::Primary).label("ㅤ")
+            ]
+        ),
+        CreateActionRow::Buttons(
+            vec![
+                CreateButton::new("fishing.minigame.4_1").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.4_2").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.4_3").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.4_4").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.4_5").style(ButtonStyle::Primary).label("ㅤ")
+            ]
+        ),
+        CreateActionRow::Buttons(
+            vec![
+                CreateButton::new("fishing.minigame.5_1").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.5_2").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.5_3").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.5_4").style(ButtonStyle::Primary).label("ㅤ"),
+                CreateButton::new("fishing.minigame.5_5").style(ButtonStyle::Primary).label("ㅤ")
+            ]
+        ),
+    ]
+}
+
+pub async fn _fishminigame( // TODO: Fishing Minigame
     ctx: Context<'_>
 ) -> Result<(), Error> {
-    ctx.send(CreateReply::default()
+    let custom_data = &ctx.data();
+    let loopchans_config = &custom_data.config;
+
+    let mut components = empty_fishing_minigame_matrix();
+
+    let row: usize = rand::rng().random_range(0..=4);
+    let column: usize = rand::rng().random_range(0..=4);
+
+    match &components[row] {
+        CreateActionRow::Buttons(current_buttons) => {
+            let mut buttons = current_buttons.clone();
+            buttons[column] = 
+                CreateButton::new("fishing.minigame.fish")
+                    .label("🐟")
+                    .style(ButtonStyle::Primary);
+
+            components[row] = CreateActionRow::Buttons(buttons);
+        },
+        _ => {}
+    }
+
+    let (catched_fish, catched_modifiers, catched_size, catched_fishmodifiers) = {
+        let fishes = &loopchans_config.economy.fishes;
+
+        let mut highest_chance: u32 = 0;
+
+        let mut total_weight: u32 = 0;
+        for fish in fishes {
+            if fish.chance > highest_chance {
+                highest_chance = fish.chance;
+            }
+            total_weight += fish.chance;
+        }
+
+        total_weight/=2; // since minigame, double the chance of cool fish
+        total_weight = total_weight.max(highest_chance);
+    
+        let weights: Vec<u32> = fishes.iter().map(|fish| total_weight-fish.chance).collect();
+        let dist = WeightedIndex::new(&weights).unwrap();
+
+        let mut rng = rng();
+        let index = dist.sample(&mut rng);
+
+        let fish: &crate::Fish = &fishes[index];
+
+        let mut modifiers: Vec<String> = vec![];
+        let mut fishmodifiers: Vec<FishModifier> = vec![];
+
+        for modifier in &fish.possible_modifiers {
+            let real_modifier = fishmodifier_from_name(modifier, &loopchans_config.economy.fishes_modifiers).unwrap();
+            if rand::rng().random_range(..=(real_modifier.chance/2)) == 1 { // double chance since minigame
+                fishmodifiers.push(real_modifier);
+                modifiers.push(modifier.to_string());
+            }
+        }
+
+        (fish, modifiers, rand::rng().random_range(fish.possible_size[0]..=fish.possible_size[1]), fishmodifiers)
+    };
+    let catched_modifiers_serialized: String = json::to_string(&catched_modifiers).unwrap();
+
+    let mut final_size: f32 = catched_size;
+    let mut final_value: f64 = catched_fish.base_value as f64;
+
+    let modifiers: Vec<FishModifier> = catched_fishmodifiers;
+    if modifiers.len() > 0 {
+        for modifier in modifiers {
+            if modifier.size_multiplier.is_some() {
+                final_size *= modifier.size_multiplier.unwrap()
+            }
+
+            if modifier.value_multiplier.is_some() {
+                final_value *= modifier.value_multiplier.unwrap() as f64
+            }
+        }
+    }
+
+    final_size = (final_size*100.0).floor()/100.0;
+    final_value = (final_value*final_size as f64).floor();
+
+    let mut score: u8 = 0;
+    let score_needed: u8 = (final_value/10.0).ceil().min(10.0) as u8;
+
+    let reply = ctx.send(CreateReply::default()
         .embed(
             CreateEmbed::default()
-                .description("wip")
+                .description(format!("=0/{}==============================================\nClick the **fish**", score_needed))
+        )
+        .components(components)
+        .ephemeral(true)
+    ).await?;
+
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    loop {
+        if score >= score_needed {
+            break;
+        }
+
+        'hopping: loop {
+            let mut components: Vec<CreateActionRow> = empty_fishing_minigame_matrix();
+    
+            let row: usize = rand::rng().random_range(0..=4);
+            let column: usize = rand::rng().random_range(0..=4);
+    
+            match &components[row] {
+                CreateActionRow::Buttons(current_buttons) => {
+                    let mut buttons = current_buttons.clone();
+                    buttons[column] = 
+                        CreateButton::new("fishing.minigame.fish")
+                            .label("🐟")
+                            .style(ButtonStyle::Primary);
+    
+                    components[row] = CreateActionRow::Buttons(buttons);
+                },
+                _ => {}
+            }
+    
+            reply.edit(ctx, CreateReply::default()
+                .embed(
+                    CreateEmbed::default()
+                        .description(format!("={}/{}=============================================\nClick the **fish**", score, score_needed))
+                )
+                .components(components)
+            ).await?;
+
+            tokio::time::sleep(Duration::from_millis(500)).await;
+
+            if reply.message().await.unwrap().embeds[0].title == Some("Processing...".to_string()) {
+                score += 1;
+                break 'hopping;
+            }
+        }
+    }
+
+    let uuid: String = Uuid::new_v4().to_string();
+
+    let successfully_gave_fish: Result<usize, async_sqlite::Error> = give_fish_to_user_in_fishing_db(&custom_data.db_client, ctx.author().id.get(), DataFish {
+        uuid: uuid.clone(),
+        modifiers: catched_modifiers_serialized,
+        r#type: catched_fish.name.clone(),
+        size: catched_size
+    }).await;
+
+    if successfully_gave_fish.is_err() {
+        error!("Failed to give fish to {}: {}", ctx.author().id.get(), successfully_gave_fish.unwrap_err().to_string());
+
+        reply.edit(ctx, CreateReply::default()
+            .embed(
+                CreateEmbed::default()
+                    .description("Failed to give you fish! Please try again later, if the issue persists contact <@908779319084589067>")
+                    .color(Color::from_rgb(255, 100, 100))
+            )
+        ).await?;
+
+        ctx.set_invocation_data(true).await; // cancel cooldown (hopefully)
+
+        return Ok(());
+    }
+
+    reply.edit(ctx, CreateReply::default()
+        .embed(
+            CreateEmbed::default()
+                .description(
+                    format!(
+                        "You catched **{} {} • {}cm! *(~${})***\n*\"{}\"*\n-# ID: {}\n-# Check your inventory for more information.",
+                        catched_modifiers.join(" "), catched_fish.name, final_size, final_value, catched_fish.description, uuid
+                    )
+                )
+                .color(Color::from_rgb(100, 255, 100))
         )
     ).await?;
 
@@ -527,7 +742,7 @@ pub async fn _profish( // TODO: Fishing Minigame
 pub async fn fish(
     ctx: Context<'_>,
     #[description = "Enable catching minigame for better fish"]
-    pro_mode: Option<bool>
+    minigame: Option<bool>
 ) -> Result<(), Error> {
     let economy_config: &crate::EconomyConfig = &ctx.data().config.economy;
     let on_cooldown: i32;
@@ -577,10 +792,10 @@ pub async fn fish(
         return Ok(());
     }
 
-    if pro_mode.is_some() {
-        if pro_mode.unwrap() {
+    if minigame.is_some() {
+        if minigame.unwrap() {
             // MINIGAME
-            return _profish(ctx).await;
+            return _fishminigame(ctx).await;
         }
     }
 

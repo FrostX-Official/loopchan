@@ -449,6 +449,8 @@ async fn handle_message_component_interaction(
         crate::handlers::events::roleshop::handle_interaction(ctx, interaction.clone(), data).await;
     } else if interaction.data.custom_id.starts_with("fishing.inventory.") {
         crate::handlers::events::inventory_paginator::handle_interaction(ctx, interaction.clone(), data).await;
+    } else if interaction.data.custom_id.starts_with("fishing.minigame.") {
+        crate::handlers::events::fishing_minigame::handle_interaction(ctx, interaction.clone(), data).await;
     }
 
     Ok(())

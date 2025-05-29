@@ -3,7 +3,6 @@ use tracing::error;
 
 use crate::{commands::fishing::{get_inventory_components, get_inventory_embeds_after_interaction}, utils::database::fishing::get_user_fishes_in_fishing_db, DataFish};
 
-
 pub async fn handle_interaction(
     ctx: &serenity::prelude::Context,
     interaction: ComponentInteraction,
