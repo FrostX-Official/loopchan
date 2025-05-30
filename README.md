@@ -24,10 +24,11 @@ Look into [Config.toml](/Config.toml) for description of config variables.
   * [ ] Custom Role Shop
   * [ ] More admin commands (like customizing balance)
   * Fishing (😍)
-    * [ ] Actual fishing
+    * [x] Actual fishing
     * [x] Fish Inventory
     * [x] Fish DB
-    * [ ] Fish transactions between players (trading)
+    * [ ] Fish Selling
+    * [ ] Fish Trading
 * Last.fm
   * [x] Authorization
   * [ ] Get info about tracks, albums & artists commands

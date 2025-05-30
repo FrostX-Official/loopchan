@@ -28,6 +28,7 @@ pub struct LoopchanConfig {
     owner: u64,
     global_cooldown: u64,
     database_path: Option<String>,
+    blacklist: Vec<u64>,
     welcomecard: WelcomecardConfig,
     roles: LoopchansRoles,
     channels: LoopchansChannels,
@@ -475,6 +476,15 @@ async fn event_handler(
             handlers::events::message::give_exp_for_message(new_message, data).await;
         }
         serenity::FullEvent::GuildMemberAddition { new_member } => { // WELCOMECARD // WELCOME MESSAGE
+            let is_blacklisted_check = handlers::events::blacklist::blacklist_check(ctx, new_member, data).await;
+            if is_blacklisted_check.is_err() {
+                error!("Failed to check if user {} is blacklisted: {} | Please check manually.", new_member.user.id.get(), is_blacklisted_check.unwrap_err().to_string());
+                return Ok(());
+            }
+            let is_blacklisted = is_blacklisted_check.unwrap();
+            if is_blacklisted {
+                return Ok(());
+            }
             handlers::events::welcomecard::welcomecard(ctx, new_member, data).await?;
         }
         _ => {}

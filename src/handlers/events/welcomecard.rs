@@ -13,7 +13,7 @@ use image::imageops::{overlay, resize, FilterType};
 use imageproc::drawing::draw_text_mut;
 use std::path::Path;
 
-type Error = Box<dyn std::error::Error + Send + Sync>;
+use crate::Error;
 
 pub async fn welcomecard(
     ctx: &serenity::Context,
