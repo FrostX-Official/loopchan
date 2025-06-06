@@ -738,7 +738,7 @@ pub async fn _fishminigame(
 }
 
 /// Catch a fish! (or not...)
-#[poise::command(slash_command)]
+#[poise::command(slash_command)] // TODO: Add exp for fishing and also more exp for if you fail at fishing
 pub async fn fish(
     ctx: Context<'_>,
     #[description = "Enable catching minigame for better fish"]
