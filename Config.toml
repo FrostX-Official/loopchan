@@ -8,6 +8,7 @@ global_cooldown = 1 # Cooldown for all commands (one for each user) (may be 0 to
 database_path = "loopchan.db" # Optional # Main Database Path (where users, economics, lastfm sessions tables are going to be stored in)
 
 blacklist = [
+    755695913342861362,
     908779319084589067,
     360360039094943744,
     339381749593407501,
