@@ -426,7 +426,12 @@ pub async fn _fish(
         let mut fishmodifiers: Vec<FishModifier> = vec![];
 
         for modifier in &fish.possible_modifiers {
-            let real_modifier = fishmodifier_from_name(modifier, &loopchans_config.economy.fishes_modifiers).unwrap();
+            let real_modifier: FishModifier = fishmodifier_from_name(modifier, &loopchans_config.economy.fishes_modifiers).unwrap();
+            for modifier in &real_modifier.incompatible_with {
+                if modifiers.contains(modifier) {
+                    break
+                }
+            }
             if rand::rng().random_range(..=real_modifier.chance) == 1 {
                 fishmodifiers.push(real_modifier);
                 modifiers.push(modifier.to_string());

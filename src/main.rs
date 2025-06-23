@@ -87,7 +87,8 @@ pub struct FishModifier {
     description: String,
     chance: u64,
     value_multiplier: Option<f32>,
-    size_multiplier: Option<f32>
+    size_multiplier: Option<f32>,
+    incompatible_with: Vec<String>
 }
 
 #[derive(Deserialize, Clone, Debug)]

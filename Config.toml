@@ -94,10 +94,10 @@ fishes = [
     { name = "Carp",    chance = 6,  color = 0x75959C, possible_size = [40,120],  description = "Woah! An \"iron\" fish.. I wouldn't eat it.",          base_value = 7,  possible_modifiers = ["Golden", "Big", "Ginormous"] },
     { name = "Axolotl", chance = 20, color = 0xF1A1FF, possible_size = [5,30],    description = "Look at how cute it is!! :3 :3",                       base_value = 20, possible_modifiers = ["Big", "Prismatic"] },
 ]
-fishes_modifiers = [
+fishes_modifiers = [ # Sort by chance
     { name = "Big",       description = "A big fish :)",                      chance = 5,   size_multiplier = 2 },
-    { name = "Ginormous", description = "A very big fish :D",                 chance = 30,  size_multiplier = 10 },
     { name = "Rotten",    description = "Ew. Just Ew.",                       chance = 8,   value_multiplier = 0.1, size_multiplier = 0.9 },
+    { name = "Ginormous", description = "A very big fish :D",                 chance = 30,  size_multiplier = 10, incompatible_with = ["Big"] },
     { name = "Golden",    description = "Woahh!~ Shiny!!",                    chance = 100, value_multiplier = 10 },
-    { name = "Prismatic", description = "WOWIE! A rainbow-looking creature!", chance = 200, value_multiplier = 25 },
+    { name = "Prismatic", description = "WOWIE! A rainbow-looking creature!", chance = 200, value_multiplier = 25, incompatible_with = ["Golden"] },
 ]
