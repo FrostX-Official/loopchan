@@ -34,6 +34,10 @@ Look into [Config.toml](/Config.toml) for description of config variables.
   * [ ] Get info about tracks, albums & artists commands
   * [ ] Server leaderboard for like specific artist
 * Giveaways
+* esmBot Replacement
+  * [ ] Convert image to GIF command
+  * [ ] Add caption to image command
+  * [ ] Add speechbubble to image command
 * New Design
   * [ ] Profile Picture
   * [ ] Banner
