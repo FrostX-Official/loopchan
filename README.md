@@ -21,13 +21,13 @@ Look into [Config.toml](/Config.toml) for description of config variables.
   * [x] Level System
   * [x] Leaderboards
   * [x] Work for coins commands *(with cooldown like 30 minutes)*
-  * [ ] Custom Role Shop
+  * [x] Custom Role Shop
+  * [ ] Paying coinys to others
   * [ ] More admin commands (like customizing balance)
   * Fishing (😍)
     * [x] Actual fishing
     * [x] Fish Inventory
     * [x] Fish DB
-    * [ ] Fish Selling
     * [ ] Fish Trading
 * Last.fm
   * [x] Authorization

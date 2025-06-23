@@ -88,7 +88,7 @@ pub struct FishModifier {
     chance: u64,
     value_multiplier: Option<f32>,
     size_multiplier: Option<f32>,
-    incompatible_with: Vec<String>
+    incompatible_with: Option<Vec<String>>
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -407,9 +407,7 @@ async fn handle_message_component_interaction(
             .embed(
                 CreateEmbed::default()
                     .title("QA Team Invitation")
-                    .description(
-                        "QA Form reviewers have been notified about your application."
-                    )
+                    .description("QA Form reviewers have been notified about your application.")
                     .color(Color::from_rgb(255, 255, 255))
             ).components(vec![])
         ).await?;
@@ -438,9 +436,7 @@ async fn handle_message_component_interaction(
             .embed(
                 CreateEmbed::default()
                     .title("QA Team Invitation")
-                    .description(
-                        "You have declined the invitation."
-                    )
+                    .description("You have declined the invitation.")
                     .color(Color::from_rgb(255, 100, 100))
             ).components(vec![])
         ).await?;
@@ -469,7 +465,7 @@ async fn event_handler(
             warn!("Logged in as {}", data_about_bot.user.name);
         }
         serenity::FullEvent::InteractionCreate { interaction } => { // Different interactions handling
-            // Message Component
+            // Message Component Interaction
             let is_component: Option<ComponentInteraction> = interaction.clone().into_message_component();
             if !is_component.is_none() { return handle_message_component_interaction(ctx, event, framework, data, &is_component.unwrap()).await; }
         }

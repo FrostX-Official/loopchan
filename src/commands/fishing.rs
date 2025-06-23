@@ -13,7 +13,7 @@ use uuid::Uuid;
 use crate::{utils::{basic::{fish_from_name, fishmodifier_from_name, fishmodifiers_from_datafishmodifiers, get_fishes_names_from_fishes, remove_whitespace}, database::fishing::{get_user_fishes_in_fishing_db, give_fish_to_user_in_fishing_db}}, Context, DataFish, Error, FishModifier};
 
 /// Fishing Commands
-#[poise::command(slash_command, subcommands("give_fish", "inventory", "fish"), subcommand_required)]
+#[poise::command(slash_command, subcommands("give_fish", "inventory", "fish", "throwaway"), subcommand_required)]
 pub async fn fishing(_ctx: Context<'_>) -> Result<(), Error> { Ok(()) }
 
 pub fn get_inventory_components(
@@ -427,9 +427,11 @@ pub async fn _fish(
 
         for modifier in &fish.possible_modifiers {
             let real_modifier: FishModifier = fishmodifier_from_name(modifier, &loopchans_config.economy.fishes_modifiers).unwrap();
-            for modifier in &real_modifier.incompatible_with {
-                if modifiers.contains(modifier) {
-                    break
+            if real_modifier.incompatible_with.is_some() {
+                for modifier in &real_modifier.incompatible_with.clone().unwrap() {
+                    if modifiers.contains(modifier) {
+                        break
+                    }
                 }
             }
             if rand::rng().random_range(..=real_modifier.chance) == 1 {
@@ -738,6 +740,18 @@ pub async fn _fishminigame(
                 .color(Color::from_rgb(100, 255, 100))
         )
     ).await?;
+
+    Ok(())
+}
+
+/// Throw away a fish from your inventory! Let it be free! Freedom!!!~
+#[poise::command(slash_command)] // TODO: Work on it
+pub async fn throwaway(
+    ctx: Context<'_>,
+    #[description = "A unique ID of fish you want to throw away"]
+    fishid: String
+) -> Result<(), Error> {
+    ctx.reply(format!("test {}", fishid)).await?;
 
     Ok(())
 }
