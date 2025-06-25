@@ -78,7 +78,7 @@ failed_work_phrases = [
     "A patrol of **enforcers caught you while you were delivering** a package.",
 ]
 work_fail_chance = 0.1        # Work has a chance to fail, user will not receive any amount of coins if that happens (10%)
-work_cooldown    = 60         # In minutes
+work_cooldown    = 10         # In minutes
 work_payment     = [100, 200] # A range of how much you get for /eco work (randomized)
 shop_not_level_3_warn = false # Should warn about server not being boost level 3 in shop?
 shop_items = [
@@ -87,8 +87,10 @@ shop_items = [
     { id = 1376627136001085531, icon_id = 1376642267430781078, icon_name = "LoopchanEnforcer", display_name = "Enforcer", description = "An enforcer that protects city from crime & runners", price = 6942 },
     { id = 1376627238774247475, icon_id = 1376642282597646436, icon_name = "LoopchanPoslar", display_name = "Poslar", description = "evil.", price = 10000 },
 ]
-fish_fail_chance = 0.1 # Fishing a fish has a chance to fail, user will not receive any fish if that happens (10%)
-fish_cooldown    = 70  # In minutes
+fish_inventory_size = 5 # Maximum amount of fishes possible in user's inventory
+fish_fail_chance = 0.1  # Fishing a fish has a chance to fail, user will not receive any fish if that happens (10%)
+fish_cooldown    = 10   # In minutes
+fish_cooldown_mg = 25   # In minutes (minigame cooldown)
 fishes = [
     { name = "Salmon",  chance = 8,  color = 0xFF7E70, possible_size = [70,100],  description = "Classic.",                                             base_value = 5,  possible_modifiers = ["Big", "Rotten"] },
     { name = "Tuna",    chance = 1,  color = 0x59CCE3, possible_size = [110,210], description = "Holy moly, a Tuna! I wonder what at-tuna-ment it is?", base_value = 2,  possible_modifiers = ["Golden", "Big", "Ginormous", "Rotten"] },

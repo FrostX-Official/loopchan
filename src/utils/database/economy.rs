@@ -43,6 +43,19 @@ pub async fn get_user_balance_in_eco_db(
     }).await
 }
 
+pub async fn get_user_level_in_eco_db(
+    db_client: &async_sqlite::Client,
+    discord_id: u64
+) -> Result<u64, async_sqlite::Error> {
+    db_client.conn(move |conn: &async_sqlite::rusqlite::Connection| {
+        conn.query_row(
+            "SELECT level FROM economics WHERE discord_id=?",
+            [discord_id],
+            |row| row.get(0),
+        )
+    }).await
+}
+
 pub async fn get_user_level_and_experience_in_eco_db(
     db_client: &async_sqlite::Client,
     discord_id: u64

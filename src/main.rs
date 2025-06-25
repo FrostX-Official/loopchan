@@ -113,6 +113,7 @@ pub struct EconomyConfig {
     shop_items: Vec<RoleShopItem>,
     fish_fail_chance: f32,
     fish_cooldown: u64,
+    fish_cooldown_mg: u64,
     fishes: Vec<Fish>,
     fishes_modifiers: Vec<FishModifier>
 }
@@ -478,7 +479,7 @@ async fn event_handler(
                 error!("Failed to check if user {} is blacklisted: {} | Please check manually.", new_member.user.id.get(), is_blacklisted_check.unwrap_err().to_string());
                 return Ok(());
             }
-            let is_blacklisted = is_blacklisted_check.unwrap();
+            let is_blacklisted: bool = is_blacklisted_check.unwrap();
             if is_blacklisted {
                 return Ok(());
             }
@@ -506,7 +507,7 @@ async fn main() {
         .with_target(false)
         .with_span_events(FmtSpan::CLOSE)
         .event_format(tracing_subscriber::fmt::format().with_timer(LocalTime).compact())
-        .with_filter(LevelFilter::DEBUG);
+        .with_filter(LevelFilter::INFO);
 
     let terminal_layer = tracing_subscriber::fmt::layer()
         .with_ansi(true)

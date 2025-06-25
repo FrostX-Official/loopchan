@@ -18,7 +18,7 @@ use crate::utils::database::economy::{
     get_user_placement_in_level_leaderboard
 };
 
-fn exp_needed_to_next_level(current_level: u64) -> u64 {
+pub fn exp_needed_to_next_level(current_level: u64) -> u64 {
     let level: f64 = current_level as f64;
     return (5.0 * (level.powf(2.0)) + (50.0 * level) + 100.0).ceil() as u64;
 }
@@ -52,31 +52,31 @@ pub async fn give_user_eco_exp(
     custom_data: &crate::Data,
     user: &serenity::model::user::User,
     amount: u64
-) {
+) -> bool { // Successful or not
     let userid: u64 = user.id.get();
     let successfully_created: Result<usize, async_sqlite::Error> = create_user_in_eco_db(&custom_data.db_client, userid).await; // Why can't I put ? here to ignore Result???
     if successfully_created.is_err() {
         error!("Failed to create user ({}) in eco db: {}", userid, successfully_created.unwrap_err().to_string());
-        return;
+        return false;
     }
 
     let level_exp_check: Result<(Result<u64, async_sqlite::rusqlite::Error>, Result<u64, async_sqlite::rusqlite::Error>), async_sqlite::Error> = get_user_level_and_experience_in_eco_db(&custom_data.db_client, userid).await;
     
     if !level_exp_check.is_ok() {
         error!("Failed to check {}'s level and experience: {}", userid, level_exp_check.unwrap_err().to_string());
-        return;
+        return false;
     }
 
     let level_and_exp_checks: (Result<u64, async_sqlite::rusqlite::Error>, Result<u64, async_sqlite::rusqlite::Error>) = level_exp_check.unwrap();
 
     if !level_and_exp_checks.0.is_ok() {
         error!("Failed to check {}'s level: {}", userid, level_and_exp_checks.0.unwrap_err().to_string());
-        return;
+        return false;
     }
 
     if !level_and_exp_checks.1.is_ok() {
         error!("Failed to check {}'s experience: {}", userid, level_and_exp_checks.1.unwrap_err().to_string());
-        return;
+        return false;
     }
 
     let level: u64 = level_and_exp_checks.0.unwrap();
@@ -87,7 +87,10 @@ pub async fn give_user_eco_exp(
     let successfully_updated: Result<usize, async_sqlite::Error> = handle_user_exp_update(&custom_data.db_client, userid, level, experience).await;
     if successfully_updated.is_err() {
         error!("Failed to update user ({}) in eco db: {}", userid, successfully_updated.unwrap_err().to_string());
+        return false;
     }
+
+    true
 }
 
 /// Economics Commands

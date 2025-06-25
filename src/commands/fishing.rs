@@ -1,5 +1,5 @@
-// TODO: Selling Fish
-// TODO: Trading Fish (and maybe gifting? (lol))
+// TODO: Trading Fish
+// TODO: Throwing fish away for exp
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -10,7 +10,9 @@ use serenity::{all::{ButtonStyle, Color, ComponentInteraction, CreateActionRow, 
 use tracing::{error, warn};
 use uuid::Uuid;
 
-use crate::{utils::{basic::{fish_from_name, fishmodifier_from_name, fishmodifiers_from_datafishmodifiers, get_fishes_names_from_fishes, remove_whitespace}, database::fishing::{get_user_fishes_in_fishing_db, give_fish_to_user_in_fishing_db}}, Context, DataFish, Error, FishModifier};
+use crate::{utils::{basic::{fish_from_name, fishmodifier_from_name, fishmodifiers_from_datafishmodifiers, get_fishes_names_from_fishes, remove_whitespace}, database::{economy::get_user_level_in_eco_db, fishing::{get_user_fishes_in_fishing_db, give_fish_to_user_in_fishing_db}}}, Context, DataFish, Error, FishModifier};
+
+use super::eco::{exp_needed_to_next_level, give_user_eco_exp};
 
 /// Fishing Commands
 #[poise::command(slash_command, subcommands("give_fish", "inventory", "fish", "throwaway"), subcommand_required)]
@@ -394,11 +396,51 @@ pub async fn _fish(
     let custom_data = &ctx.data();
     let loopchans_config = &custom_data.config;
 
+    let author_id: u64 = ctx.author().id.get();
+
     if rand::rng().random_bool(loopchans_config.economy.fish_fail_chance.into()) {
+        let users_lvl = get_user_level_in_eco_db(&custom_data.db_client, author_id).await;
+        if users_lvl.is_err() {
+            error!("Failed to check {}'s level: {}", author_id, users_lvl.unwrap_err().to_string());
+    
+            ctx.send(CreateReply::default()
+                .embed(
+                    CreateEmbed::default()
+                        .description("Failed to check your level! Please try again later, if the issue persists contact <@908779319084589067>")
+                        .color(Color::from_rgb(255, 100, 100))
+                )
+            ).await?;
+    
+            ctx.set_invocation_data(true).await; // cancel cooldown (hopefully)
+    
+            return Ok(());
+        }
+        let users_lvl: u64 = users_lvl.unwrap();
+        let exp_needed: u64 = exp_needed_to_next_level(users_lvl);
+        let exp_to_give: u64 = rand::rng().random_range(exp_needed/2..exp_needed);
+
+        let successfully_gave_exp: bool = give_user_eco_exp(custom_data, ctx.author(), exp_to_give).await;
+
+        if !successfully_gave_exp {
+            ctx.send(CreateReply::default()
+                .embed(
+                    CreateEmbed::default()
+                        .description("Failed to give you experience! Please try again later, if the issue persists contact <@908779319084589067>")
+                        .color(Color::from_rgb(255, 100, 100))
+                )
+            ).await?;
+
+            ctx.set_invocation_data(true).await; // cancel cooldown (hopefully)
+
+            return Ok(());
+        }
+
         ctx.send(CreateReply::default()
             .embed(
                 CreateEmbed::default()
-                    .description("When you drive to nearest river it turns out your fishing rod is broken 😕\nCome back later 😓")
+                    .description(format!(
+                        "When you drive to nearest river it turns out your fishing rod is broken <:LoopchanOhno:1386683400848670800>\nCome back later <:LoopchanSadKitty:1386683506268176545>\n**+{} EXP**", exp_to_give
+                    ))
                     .color(Color::from_rgb(255, 100, 100))
             )
         ).await?;
@@ -477,7 +519,7 @@ pub async fn _fish(
 
     let uuid = Uuid::new_v4().to_string();
 
-    let successfully_gave_fish: Result<usize, async_sqlite::Error> = give_fish_to_user_in_fishing_db(&custom_data.db_client, ctx.author().id.get(), DataFish {
+    let successfully_gave_fish: Result<usize, async_sqlite::Error> = give_fish_to_user_in_fishing_db(&custom_data.db_client, author_id, DataFish {
         uuid: uuid.clone(),
         modifiers: catched_modifiers_serialized,
         r#type: catched_fish.name.clone(),
@@ -485,7 +527,7 @@ pub async fn _fish(
     }).await;
 
     if successfully_gave_fish.is_err() {
-        error!("Failed to give fish to {}: {}", ctx.author().id.get(), successfully_gave_fish.unwrap_err().to_string());
+        error!("Failed to give fish to {}: {}", author_id, successfully_gave_fish.unwrap_err().to_string());
 
         reply.edit(ctx, CreateReply::default()
             .embed(
@@ -499,6 +541,8 @@ pub async fn _fish(
 
         return Ok(());
     }
+
+    // TODO: Exp for fishing
 
     reply.edit(ctx, CreateReply::default()
         .embed(
@@ -694,10 +738,18 @@ pub async fn _fishminigame(
                 .components(components)
             ).await?;
 
-            tokio::time::sleep(Duration::from_millis(500)).await;
+            tokio::time::sleep(Duration::from_millis(750)).await;
 
-            if reply.message().await.unwrap().embeds[0].title == Some("Processing...".to_string()) {
+            let colour = reply.message().await.unwrap().embeds[0].colour;
+            if colour.is_none() {
+                continue;
+            }
+            let green: u8 = colour.unwrap().g();
+            if green == 160 {
                 score += 1;
+                break 'hopping;
+            } else if green == 159 {
+                score = 0;
                 break 'hopping;
             }
         }
@@ -705,7 +757,9 @@ pub async fn _fishminigame(
 
     let uuid: String = Uuid::new_v4().to_string();
 
-    let successfully_gave_fish: Result<usize, async_sqlite::Error> = give_fish_to_user_in_fishing_db(&custom_data.db_client, ctx.author().id.get(), DataFish {
+    let author_id = ctx.author().id.get();
+
+    let successfully_gave_fish: Result<usize, async_sqlite::Error> = give_fish_to_user_in_fishing_db(&custom_data.db_client, author_id, DataFish {
         uuid: uuid.clone(),
         modifiers: catched_modifiers_serialized,
         r#type: catched_fish.name.clone(),
@@ -713,7 +767,7 @@ pub async fn _fishminigame(
     }).await;
 
     if successfully_gave_fish.is_err() {
-        error!("Failed to give fish to {}: {}", ctx.author().id.get(), successfully_gave_fish.unwrap_err().to_string());
+        error!("Failed to give fish to {}: {}", author_id, successfully_gave_fish.unwrap_err().to_string());
 
         reply.edit(ctx, CreateReply::default()
             .embed(
@@ -727,6 +781,8 @@ pub async fn _fishminigame(
 
         return Ok(());
     }
+
+    // TODO: Exp for fishing
 
     reply.edit(ctx, CreateReply::default()
         .embed(
@@ -757,13 +813,14 @@ pub async fn throwaway(
 }
 
 /// Catch a fish! (or not...)
-#[poise::command(slash_command)] // TODO: Add exp for fishing and also more exp for if you fail at fishing
+#[poise::command(slash_command)]
 pub async fn fish(
     ctx: Context<'_>,
     #[description = "Enable catching minigame for better fish"]
     minigame: Option<bool>
 ) -> Result<(), Error> {
-    let economy_config: &crate::EconomyConfig = &ctx.data().config.economy;
+    let custom_data: &crate::Data = &ctx.data();
+    let economy_config: &crate::EconomyConfig = &custom_data.config.economy;
     let on_cooldown: i32;
 
     {
@@ -771,6 +828,12 @@ pub async fn fish(
 
         let mut cooldown_durations: CooldownConfig = CooldownConfig::default();
         cooldown_durations.user = Some(Duration::from_secs(economy_config.fish_cooldown*60));
+
+        if minigame.is_some() {
+            if minigame.unwrap() {
+                cooldown_durations.user = Some(Duration::from_secs(economy_config.fish_cooldown_mg*60));
+            }
+        }
 
         match cooldown_tracker.remaining_cooldown(ctx.cooldown_context(), &cooldown_durations) {
             Some(remaining) => {

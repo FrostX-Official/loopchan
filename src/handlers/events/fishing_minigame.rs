@@ -9,13 +9,14 @@ pub async fn handle_interaction(
     if interaction_id != "fishing.minigame.fish" {
         interaction.create_response(
             ctx,
-            CreateInteractionResponse::Message(
+            CreateInteractionResponse::UpdateMessage(
                 CreateInteractionResponseMessage::default()
                     .embed(
                         CreateEmbed::default()
-                            .description("You missed!")
-                            .color(Color::from_rgb(255, 100, 100))
+                            .description("Processing...")
+                            .color(Color::from_rgb(255, 159, 100))
                     )
+                    .components(vec![])
                     .ephemeral(true)
             )
         ).await.unwrap();

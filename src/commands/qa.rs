@@ -13,13 +13,15 @@ pub async fn sendform(
     ctx: Context<'_>,
     #[description = "Member"] user: serenity::model::user::User
 ) -> Result<(), Error> {
-    // Check if user is already QA
-    if is_qa(ctx, &user).await {
-        ctx.send(poise::CreateReply::default()
-            .content("This user is already in QA program.")
-            .ephemeral(true)
-        ).await?;
-        return Ok(());
+    // Check if user is already QA (ignore owner for testing)
+    if &user.id.get() != &ctx.data().config.owner {
+        if is_qa(ctx, &user).await {
+            ctx.send(poise::CreateReply::default()
+                .content("This user is already in QA program.")
+                .ephemeral(true)
+            ).await?;
+            return Ok(());
+        }
     }
 
     // These are handled in [main.rs] -> [handle_message_component]
