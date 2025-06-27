@@ -507,7 +507,7 @@ async fn main() {
         .with_target(false)
         .with_span_events(FmtSpan::CLOSE)
         .event_format(tracing_subscriber::fmt::format().with_timer(LocalTime).compact())
-        .with_filter(LevelFilter::INFO);
+        .with_filter(LevelFilter::WARN);
 
     let terminal_layer = tracing_subscriber::fmt::layer()
         .with_ansi(true)
