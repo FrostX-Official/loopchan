@@ -20,7 +20,7 @@ use crate::utils::database::economy::{
 
 pub fn exp_needed_to_next_level(current_level: u64) -> u64 {
     let level: f64 = current_level as f64;
-    return (5.0 * (level.powf(2.0)) + (50.0 * level) + 100.0).ceil() as u64;
+    return (5.0 * (level.powf(2.5)) + (100.0 * level) + 100.0).ceil() as u64;
 }
 
 pub async fn handle_user_exp_update(

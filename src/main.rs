@@ -185,9 +185,9 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 // Loopchan's Game Status
 use once_cell::sync::Lazy;
 static PTL_PAID_TESTING_PRESENCE: Lazy<serenity::ActivityData> = Lazy::new(|| serenity::ActivityData {
-    name: "PTL Paid Testing".to_string(),
+    name: "PARKOUR: The Loop".to_string(),
     kind: serenity::ActivityType::Playing,
-    state: None,
+    state: Some("700 ELO | In Queue".to_string()),
     url: None,
 });
 
@@ -653,7 +653,7 @@ async fn main() {
                 let loopchans_config: LoopchanConfig = toml::from_str(&toml_string.unwrap()).unwrap();
 
                 ctx.set_activity(Some(PTL_PAID_TESTING_PRESENCE.clone()));
-                ctx.dnd();
+                ctx.idle();
 
                 let ptl_guild_id: serenity::model::prelude::GuildId = loopchans_config.guild.into();
                 // Register commands
