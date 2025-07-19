@@ -1,6 +1,7 @@
 use dotenv::dotenv;
 
 use serde::Serialize;
+use ::serenity::all::CreateInteractionResponseMessage;
 use ::serenity::all::{ChannelId, Color, ComponentInteraction, CreateAllowedMentions, CreateEmbed, CreateMessage, EditMessage};
 
 use poise::CreateReply;
@@ -22,11 +23,12 @@ use std::time::Instant;
 use serde::Deserialize;
 use toml;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct LoopchanConfig {
     guild: u64,
     owner: u64,
     global_cooldown: u64,
+    maintenance: bool,
     database_path: Option<String>,
     blacklist: Vec<u64>,
     welcomecard: WelcomecardConfig,
@@ -41,20 +43,20 @@ impl TypeMapKey for LoopchanConfig {
     type Value = LoopchanConfig;
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ProgressBarEmojisTypes {
     empty: ProgressBarEmojis,
     filled: ProgressBarEmojis,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ProgressBarEmojis {
     start: String,
     mid: String,
     end: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct LevelingConfig {
     max_exp_per_message: u64,
     exp_multiplier: u64,
@@ -63,7 +65,7 @@ pub struct LevelingConfig {
     progress_bar_in_leaderboard_size: u64
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct RoleShopItem {
     id: u64,
     display_name: String,
@@ -91,7 +93,7 @@ pub struct FishModifier {
     incompatible_with: Option<Vec<String>>
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Fish {
     name: String,
     chance: u32, // 1 in `chance`
@@ -102,7 +104,7 @@ pub struct Fish {
     possible_modifiers: Vec<String>
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct EconomyConfig {
     work_phrases: Vec<String>,
     failed_work_phrases: Vec<String>,
@@ -118,7 +120,7 @@ pub struct EconomyConfig {
     fishes_modifiers: Vec<FishModifier>
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct WelcomecardConfig {
     enabled: bool,
     channel: Option<u64>,
@@ -128,14 +130,14 @@ pub struct WelcomecardConfig {
     react_animated: Option<bool>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct LoopchansRoles {
     qa: u64,
 //    staff: u64, // commented out to avoid deadcode warning for now
     member: u64,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct LoopchansChannels {
     qa_forms: u64,
     unverified_chat: u64
@@ -385,6 +387,16 @@ async fn handle_message_component_interaction(
     interaction: &ComponentInteraction
 ) -> Result<(), Error> {
     let loopchans_config = &data.config;
+
+    if loopchans_config.maintenance && interaction.user.id.get() != loopchans_config.owner {
+        interaction.create_response(ctx, serenity::CreateInteractionResponse::Message(
+            CreateInteractionResponseMessage::default()
+                .content("Loopchan is currently closed for maintenance. Please check back later, or wait for announcement.")
+                .ephemeral(true)
+        )).await?;
+        return Ok(());
+    }
+
     if interaction.data.custom_id == "qa.invitation.accept" {
         let ptl_channels: std::collections::HashMap<ChannelId, serenity::model::prelude::GuildChannel> = ctx.cache.guild(loopchans_config.guild).unwrap().channels.clone();
         let qa_forms_channel = ptl_channels.get(&loopchans_config.channels.qa_forms.into());
@@ -545,7 +557,8 @@ async fn main() {
                 commands::qa::qa(),
                 commands::eco::eco(),
                 commands::lastfm::lastfm(),
-                commands::fishing::fishing()
+                commands::fishing::fishing(),
+                commands::adm::adm(),
             ],
             command_check: Some(|ctx| {
                 Box::pin(async move {
@@ -557,6 +570,13 @@ async fn main() {
                     }
 
                     let loopchans_config = &ctx.data().config;
+
+                    let author_id = ctx.author().id;
+
+                    if loopchans_config.maintenance && author_id.get() != loopchans_config.owner {
+                        return Err("Loopchan is currently closed for maintenance. Please check back later, or wait for announcement.".into());
+                    }
+
                     let mut cooldown_durations = poise::CooldownConfig::default();
                     if loopchans_config.global_cooldown == 0 {
                         cooldown_durations.user = None;
@@ -565,7 +585,7 @@ async fn main() {
                     }
 
                     let cc: poise::CooldownContext = poise::CooldownContext {
-                        user_id: ctx.author().id,
+                        user_id: author_id,
                         channel_id: ctx.channel_id(),
                         guild_id: ctx.guild_id()
                     };
@@ -604,7 +624,6 @@ async fn main() {
                 let author_id: u64 = author.id.get();
 
                 let custom_data: &Data = ctx.data();
-
                 Box::pin(async move {
                     info!("@{} ({}) executing command: \"{}\"", author.name, author.id, ctx.command().name);
 

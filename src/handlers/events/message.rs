@@ -10,9 +10,15 @@ pub async fn give_exp_for_message(
     message: &Message,
     data: &crate::Data
 ) {
+    let userid: u64 = message.author.id.get();
+    let loopchans_config = &data.config;
+
+    if loopchans_config.maintenance && userid != loopchans_config.owner {
+        return; // Loopchan is currently closed for maintenance. Please check back later, or wait for announcement.
+    }
+
     if message.author.bot { return; }
     if message.content.len() < 2 { return; }
-    let userid: u64 = message.author.id.get();
     let cooldown_duration: Duration = Duration::from_secs(10);
     let mut cooldowns = data.exp_cooldowns.lock().await;
     let last_exp_time = cooldowns.entry(userid).or_insert((Instant::now() - cooldown_duration).into());

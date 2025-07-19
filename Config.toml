@@ -3,6 +3,8 @@
 guild = 1334179500384059456 # PTL Guild ID
 owner = 908779319084589067  # Loopchan's Owner ID
 
+maintenance = true # Incase loopchan is currently under rewrite and unauthorized user tries to use any command.
+
 global_cooldown = 1 # Cooldown for all commands (one for each user) (may be 0 to disable)
 
 database_path = "loopchan.db" # Optional # Main Database Path (where users, economics, lastfm sessions tables are going to be stored in)

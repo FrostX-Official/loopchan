@@ -14,7 +14,7 @@ pub async fn blacklist_check(
             CreateMessage::default()
                 .embed(
                     CreateEmbed::default()
-                        .description("Hello! You have been blacklisted from **PARKOUR: The Loop** before server launch.\nThis means that you've been permanently banned from **datalose** earlier, without appealing.\nReasons of blacklisting are not being disclosed, if you were blacklisted this means that you should know what you did.\nCurrently appealing a blacklist is not possible. However, we will let you know if that changes ever.")
+                        .description("Hello! You have been blacklisted from **PARKOUR: The Loop**.\nThis means that you will not be able to access any of the content related to **PTL**, or it's community.\nReasons of blacklisting are not being disclosed, if you were blacklisted this means that you should know what you did.\nCurrently appealing a blacklist is not possible. However, we will let you know if that changes ever.")
                         .color(Color::from_rgb(255, 0, 0))
                 )
         ).await;
