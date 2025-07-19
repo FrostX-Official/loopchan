@@ -15,6 +15,7 @@ Look into [Config.toml](/Config.toml) for description of config variables.
 ## TODOs ->
 * *l18n?*
 * Counting channel moderation
+* Add permission check back to bot, incase discord goes stupid
 * Economics
   * [x] Balance
   * [x] Exp for chatting
