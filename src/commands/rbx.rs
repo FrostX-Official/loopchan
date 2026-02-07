@@ -2,7 +2,8 @@ use std::time::Duration;
 
 use poise::CreateReply;
 use roboat::{thumbnails::{ThumbnailSize, ThumbnailType}, users::UsernameUserDetails};
-use serenity::all::{ButtonStyle, Colour, CreateActionRow, CreateButton, CreateEmbed};
+use serenity::all::{ButtonStyle, Colour, CreateActionRow, CreateButton, CreateEmbed, Guild, RoleId};
+use tracing::error;
 
 use crate::{utils::{basic::remove_whitespace, database::linking::get_roblox_id_in_users_db_by_discord_id}, Context, Data, Error};
 
@@ -48,6 +49,39 @@ pub async fn verify(
                 .ephemeral(true)
             ).await?;
             return Ok(());
+        }
+
+        let member: serenity::all::Member = Guild::get(ctx, ctx_data.config.guild).await.unwrap().member(ctx, author_id).await.unwrap();
+        if !member.roles.contains(&RoleId::new(ctx_data.config.roles.member)) {
+            let successfully_gave_member_role: Result<(), serenity::Error> = member.add_role(ctx, RoleId::new(ctx_data.config.roles.member)).await;
+            if !successfully_gave_member_role.is_ok() {
+                error!("{}", &successfully_gave_member_role.err().unwrap().to_string());
+                ctx.send(poise::CreateReply::default()
+                    .embed(
+                        CreateEmbed::default()
+                            .title("Already verified!")
+                            .description(
+                                "Thank you for verification!\nOnce the game comes out you will be able to update your roles, depending on your data ingame :D\n-# **Failed to give out member role though! Please contact <@&1334231212851466311> for that.**"
+                            )
+                            .color(Colour::from_rgb(80, 255, 80))
+                    )
+                    .ephemeral(true)
+                )
+                .await.unwrap();
+            } else {
+                ctx.send(poise::CreateReply::default()
+                    .embed(
+                        CreateEmbed::default()
+                            .title("Already verified!")
+                            .description(
+                                "Thank you for verification!\nOnce the game comes out you will be able to update your roles, depending on your data ingame :D\n-# **Also gave you member role because you didn't had it for some reason...**"
+                            )
+                            .color(Colour::from_rgb(80, 255, 80))
+                    )
+                    .ephemeral(true)
+                )
+                .await.unwrap();
+            }
         }
 
         let user_details_unwrapped: roboat::users::UserDetails = user_details.unwrap();
