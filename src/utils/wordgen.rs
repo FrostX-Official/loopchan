@@ -5,23 +5,22 @@ lose
 win
 ragequit
 perpetuity
-hudzell
-lunari
 frost
 prokitek
+cheaterban
 parkour
 loop
-parkour the loop
+parkourtheloop
+ptl
 community
-reborn
 ranked
 movement
 competitive
-time trial
+timetrial
 otimads
-kapitan wai
+kapitanwai
 datalose
-kremble
+kremle
 ash
 joe
 quilical
@@ -38,12 +37,12 @@ wingsuit
 quickturn
 genesis
 elo
-bloxy cola
+bloxycola
 slide
 route
+astrid
 gap
 silly
-infinite map
 adrenaline
 combo
 flow
@@ -53,9 +52,20 @@ spawn
 zipline
 vertex
 velocity
+maro
+geum
+jejo
+saeng
+daehu
+donch
+hyeon
+poslar
+elysium
 gear
 party
+vector
 prop
+vent
 landing
 bronze
 silver
@@ -68,17 +78,21 @@ points
 skins
 hwlq
 vecetyp
-long jump
+longjump
 coil
 springboard
-cut dash
-stim reset
-stim hop
+cutdash
+stimreset
+stimhop
 paraglider
+trinket
+deka
+fangs
 skydive
-dropbug
-downshift
-downslam";
+ledgegrab
+ledgeboost
+ziplaunch
+downshift";
 
 pub async fn getgenwords() -> Vec<&'static str> {
     return WORDS_STR.split("\n").collect();

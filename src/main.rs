@@ -293,7 +293,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
             ..
         } => {
             let msg = format!(
-                "You're too fast!~ Please wait `{}` seconds before retrying!!",
+                "You're too fast! Please wait `{}` seconds before retrying!!",
                 remaining_cooldown.as_secs()
             );
             ctx.send(CreateReply::default().content(msg).ephemeral(true))
@@ -598,7 +598,7 @@ async fn main() {
                     match remaining_cooldown {
                         Some(remaining) => {
                             let remaining_precise: f64 = (remaining.as_millis() as f64)/1000.0;
-                            let error_msg = format!("You're too fast!~ Please wait `{}` seconds before retrying!!", remaining_precise);
+                            let error_msg = format!("You're too fast! Please wait `{}` seconds before retrying!!", remaining_precise);
                             
                             ctx.send(poise::CreateReply::default()
                                 .content(error_msg)

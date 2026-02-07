@@ -194,15 +194,14 @@ pub async fn verify(
             CreateEmbed::default()
                 .title("Found User!")
                 .description(
-                    format!("Username: {}\nUser ID: {}\n**Please confirm that this is your Roblox Account by changing your profile description to:**\n```{}```\n## You have 5 minutes.\n-# You can change it back after verification process! (Make sure to save it though :D)", roblox_username, roblox_user_id, randomwords.join("\n"))
+                    format!("Username: {}\nUser ID: {}\n**Please confirm that this is your Roblox Account by changing your Roblox profile bio to:**\n```{}```\n## You have 5 minutes.\n-# You can regenerate verification string, incase Roblox filters it out.\n-# You can change it back after verification process! *(make sure to save your original bio though <:LoopchanSteamHappy:1469663938890301490>)*", roblox_username, roblox_user_id, randomwords.join(" "))
                 )
                 .color(Colour::from_rgb(255, 255, 100))
         )
         .components(vec![components])
         .ephemeral(true);
 
-    randomwords.remove(0); // For some reason if you join vector with \n separator it will not show first element in embed. This is why we're deleting it after creating embed
-    let no_whitespace_wordgen = remove_whitespace(&randomwords.join("\n"));
+    let no_whitespace_wordgen = remove_whitespace(&randomwords.join(""));
 
     ctx_data.verifications.lock().await.insert(author_id, (no_whitespace_wordgen, roblox_user_id));
     let reply = ctx.send(builder).await?;

@@ -22,7 +22,20 @@ pub async fn handle_interaction(
     let roblox_user_id: u64;
     {
         let verifications_data_lock = data.verifications.lock().await;
-        let (wordgen, id) = verifications_data_lock.get(&interaction.user.id.get()).unwrap();
+        let verification_data_attempt: Option<&(String, u64)> = verifications_data_lock.get(&interaction.user.id.get());
+        if verification_data_attempt.is_none() {
+            interaction.create_response(
+                ctx,
+                CreateInteractionResponse::UpdateMessage(
+                    CreateInteractionResponseMessage::default()
+                        .components(vec![])
+                        .embeds(vec![])
+                        .content("This interaction is outdated. Please try again.")
+                )
+            ).await.unwrap();
+            return;
+        }
+        let (wordgen, id) = verification_data_attempt.unwrap();
         no_whitespace_wordgen = wordgen.clone(); // hpfully not expensive
         roblox_user_id = id.clone();
     }
@@ -87,7 +100,7 @@ pub async fn handle_interaction(
 
                 let remaining = cooldown_duration-last_regeneration_time.elapsed();
                 let remaining_precise: f64 = (remaining.as_millis() as f64)/1000.0;
-                let error_msg = format!("You're too fast!~ Please wait `{}` seconds before retrying!!", remaining_precise);
+                let error_msg = format!("You're too fast! Please wait `{}` seconds before retrying!!", remaining_precise);
 
                 interaction.create_followup(
                     ctx,
@@ -113,7 +126,7 @@ pub async fn handle_interaction(
                 CreateEmbed::default()
                     .title("Found User!")
                     .description(
-                        format!("**Please confirm that this is your Roblox Account by changing your profile description to:**\n```{}```\n## You have 5 minutes.\n-# You can change it back after verification process! (Make sure to save it though :D)", randomwords.join("\n"))
+                        format!("**Please confirm that this is your Roblox Account by changing your Roblox profile bio to:**\n```{}```\n## You have 5 minutes.\n-# You can regenerate verification string, incase Roblox filters it out.\n-# You can change it back after verification process! *(make sure to save your original bio though <:LoopchanSteamHappy:1469663938890301490>)*", randomwords.join(" "))
                     )
                     .color(Colour::from_rgb(255, 255, 100))
             )
